@@ -18,13 +18,13 @@ Only one milestone is implemented at a time, after owner agreement. Each is a pr
 - **Verification:** Run lint and build checks, verify debug signing, install the development APK, cold-open it, reopen it from the launcher icon, and inspect logs for startup failures.
 - **Completion criteria:** The owner completes the install/open steps; observed device/software details and commands are recorded; no capture, backend, or AI behaviour is implied.
 
-## 2. Capture-first local text vault
+## 2. Capture-first local text vault (complete)
 
-- **Outcome:** The owner can immediately type/paste, save, browse, and favourite text locally; empty and ready states follow the UX principles.
+- **Outcome:** The owner can immediately type/paste, save, browse, and read text locally, with one persistent capture draft; empty and ready states follow the UX principles. Favourites are deferred.
 - **Learning objective:** Compose state versus persisted state, navigation, local modelling, repositories, migrations, accessibility, and Android tests.
 - **Prerequisites:** Milestone 1; agree local database, minimal item schema, and first UX slice.
-- **Verification:** Test capture prominence and state comprehension on the phone; save notes, force-stop/restart and reboot; run repository/migration tests.
-- **Completion criteria:** Notes remain readable, the owner can repeat the flow, and the UI does not expose unimplemented processing or technical controls.
+- **Verification:** Run focused repository and ViewModel device tests for persistence, failed saves, repeated Save taps, and draft/save coordination. On the phone, save/read notes, restart/reopen, test offline capture, and verify a draft after waiting for its documented debounce interval. Reinstall the debug app with `-r` over a saved note and confirm it remains.
+- **Completion criteria:** Notes remain readable after the agreed checks, the owner confirms the flow on the phone, and the UI does not expose unimplemented processing, cloud, or technical controls.
 
 ## 3. Authenticated backend and safe offline sync
 

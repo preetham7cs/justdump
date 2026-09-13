@@ -2,13 +2,13 @@
 
 This is a proposed architecture, not an implemented system. A choice marked **preferred** is a direction to evaluate, not a confirmed dependency. Choices become **confirmed** only after owner agreement and milestone evidence.
 
-The implemented Android foundation is one native application module using Kotlin and Jetpack Compose. Its confirmed identifiers are application ID `io.github.preetham7cs.justdump`, minimum SDK 26, and compile/target SDK 36. Standard debug signing is confirmed for development only; no product capabilities or later architecture components are implemented yet.
+The implemented Android client is one native application module using Kotlin and Jetpack Compose. Its confirmed identifiers are application ID `io.github.preetham7cs.justdump`, minimum SDK 26, and compile/target SDK 36. Standard debug signing is confirmed for development only. Milestone 2 adds a Room 3 device-local database for text notes and one capture draft; it is not a cloud-synchronised or indexed knowledge store.
 
 ## Proposed components
 
 | Component | Proposed technology | Responsibility |
 | --- | --- | --- |
-| Android client | Kotlin and Jetpack Compose | Capture/share intents, durable local save, sync state, browsing, questions, and source navigation. Local database and scheduler are unresolved. |
+| Android client | Kotlin, Jetpack Compose, Room 3 | Capture text locally, display recent notes, and read saved notes. Sharing, sync, questions, and source navigation remain proposed. Room is the confirmed device-local store; a scheduler is unresolved. |
 | HTTP API | Python, FastAPI, and Pydantic | Authenticate, validate versioned contracts, manage items/questions, and expose truthful state. |
 | Primary data store | Supabase Postgres with pgvector | Proposed home for owner data, metadata, extracted content, chunks, vectors, provenance, relationships, and migrations. |
 | Object storage | Supabase object storage | Proposed store for originals and binary payloads, separate from derived representations. |
@@ -52,7 +52,7 @@ Entity resolution needs explicit handling for aliases, duplicate candidates, mer
 
 | State | Meaning | Expected lifetime | Proposed home |
 | --- | --- | --- | --- |
-| Saved knowledge | Owner-controlled originals and derived knowledge used as evidence. | Until deletion under an agreed policy. | Postgres/pgvector and object storage, with local capture state while syncing. |
+| Saved knowledge | Owner-controlled originals and derived knowledge used as evidence. | Until deletion under an agreed policy. | Proposed Postgres/pgvector and object storage. During Milestone 2, text notes exist only in the device-local Room database and are neither synchronised nor indexed. |
 | Conversation history | Questions, responses, and citations. It can provide conversational context but is not automatically evidence. | Retention unresolved. | Postgres; optional device cache. |
 | LangGraph checkpoints | Typed execution state for an ingestion or question run, including node outputs, routing, tool results, budgets, and errors. | Run-scoped or retained briefly for recovery/debugging. | LangGraph-compatible checkpointer; unresolved. |
 | Background job state | Durable coordination state: stage, lease, attempts, dependencies, and failure classification. It is not knowledge or conversation. | Through completion plus an operational window. | Persistent job store/queue; unresolved. |
@@ -106,7 +106,7 @@ Model selection and task routing are specified in `model-strategy.md`. Hosted AP
 
 ## Decisions still to make
 
-- Local database/scheduler and detailed Android accessibility targets.
+- Local scheduler and detailed Android accessibility targets.
 - Hosting and deployment topology; Supabase project/authentication configuration.
 - Job store, worker execution environment, checkpoints, and recovery targets.
 - Model and embedding candidates, execution location, hardware feasibility, licences, privacy, budgets, and fallbacks.

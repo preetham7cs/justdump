@@ -4,7 +4,7 @@ JustDump is a durable personal knowledge application, initially for Android. It 
 
 ## Project status
 
-Milestone 1 is complete. The Android foundation under `apps/android/` builds, passes lint, installs, launches, displays `JustDump`, and reopens from its launcher icon on the physical test phone. No capture, storage, backend, authentication, or AI features exist yet. Proposed technologies and unresolved decisions are not commitments.
+Milestones 1 and 2 are complete. The Android app now has a verified device-local text vault: capture a note, save it, browse recent notes, read a note, and retain one draft after reopening. It has no cloud backup or synchronisation, backend, authentication, indexing, or AI capability. Proposed technologies and unresolved decisions are not commitments.
 
 ## Reference documents
 

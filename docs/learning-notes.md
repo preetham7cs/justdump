@@ -40,6 +40,44 @@ The initial packaging command was interrupted by the terminal timeout and left a
 - Limitations or uncertainty: this milestone verifies only the minimal debug app on the physical test phone; it does not verify any capture, persistence, backend, authentication, or AI behaviour.
 - Follow-up question: none for Milestone 1; discuss and agree Milestone 2 separately.
 
+## Entry: Device-local notes and coordinated drafts
+
+- **Date:** 2026-09-13
+- **Milestone:** 2, Capture-first local text vault
+- **Question or concept:** How can a Compose editor feel immediate while text notes and a single draft remain durable without a stale background write reviving saved content?
+- **Why it matters to JustDump:** Capture must work without a network and must make its device-local durability boundaries understandable before cloud synchronisation exists.
+- **Decision status:** Confirmed
+
+### Mental model
+
+Compose observes a `ViewModel` state flow and renders it; it does not own the durable note. The ViewModel forwards note and draft operations to a repository, and Room is the durable device-local source of truth. A `SavedStateHandle` is deliberately limited to the small selected-note ID, not note bodies.
+
+Each edit receives a monotonically increasing draft generation. A 500 ms debounce writes only the generation it observed. Saving captures both the text and generation in one Room transaction, then clears the draft only up to that generation. Older delayed writes are rejected, while text typed during a save has a newer generation and remains the next draft.
+
+### Options and hypothesis
+
+- Options considered: keep draft text only in Compose/saved state; persist on every keystroke; or use a debounced Room draft with generation coordination.
+- Trade-offs: in-memory state is fast but unsafe on process death; every-keystroke database writes are simple but noisy; a debounce reduces writes but leaves a short durability window and needs race protection.
+- Expected result and reason: Room plus a 500 ms generation-aware debounce and transactional save should retain intentional input without letting an older job overwrite a later state.
+
+### Experiment
+
+- Setup and fixed inputs: JustDump debug build, Room 3 database version 1, authorised Samsung SM-S918U1 on Android 16/API 36.
+- Steps or command: run `:app:connectedDebugAndroidTest`, `:app:lintDebug`, and `:app:assembleDebug`; install with `adb install -r`; launch `MainActivity`.
+- Metric or observable result: repository and ViewModel cases for stale drafts, duplicate/failed saves, repeated Save taps, and typing during save pass; lint/build/install/launch succeed.
+- Conditions that would falsify the hypothesis: a stale draft reappears after save, failed save discards input, repeated taps create multiple saves, newer text disappears during save, or device tests/build/install fail.
+
+### Results
+
+Instrumented tests passed on the physical Samsung for the five coordination/persistence cases. `lintDebug` and `assembleDebug` passed. The debug APK installed with non-destructive `-r` and launched successfully. The owner then confirmed save/recents/detail, offline capture/read, draft restoration after close/reopen, and saved-note retention across the update.
+
+### Conclusion
+
+- What was learned: durable UI state needs an explicit source of truth and an ordering rule when delayed writes and user actions can overlap.
+- Decision: retain Room as the local note/draft store, a 500 ms documented debounce, generation-based stale-write rejection, and transactional save/draft acknowledgement. Keep data bodies out of `SavedStateHandle`.
+- Limitations or uncertainty: no system can promise the last keystroke survives an immediate force-stop before the debounce. `allowBackup=false` and database exclusions set a privacy policy, but backup/restore needs later explicit resilience-milestone verification.
+- Follow-up question: discuss and agree the next narrowly scoped milestone before implementing more features.
+
 ## Entry: _title_
 
 - **Date:** YYYY-MM-DD

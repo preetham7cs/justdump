@@ -4,7 +4,7 @@ Last updated: 2026-09-13
 
 ## Current state
 
-Milestones 0 and 1 are complete. The minimal Android app has been built, linted, debug-signed, installed, and launched on the physical test phone. Automated device inspection found the expected `JustDump` text in the focused activity and no matching fatal crash. The owner then confirmed that the welcome screen was visible and that JustDump reopened successfully from its launcher icon.
+Milestones 0, 1, and 2 are complete. The local-text-vault debug build passes lint and assembly, focused persistence/coordination device tests pass, and the owner has verified the user-visible flow on the physical phone, including offline use, draft restoration, and retention across a non-destructive update.
 
 ## Verified Milestone 1 work
 
@@ -17,7 +17,18 @@ Milestones 0 and 1 are complete. The minimal Android app has been built, linted,
 - ADB streamed installation succeeded. A cold launch completed, Android reported `MainActivity` focused, the live UI hierarchy contained `JustDump`, and the crash buffer contained no matching fatal exception.
 - The owner visually confirmed the `JustDump` welcome screen and successfully reopened the app from its launcher icon on 2026-09-13.
 
-Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and debug signing material are excluded from Git. No app feature beyond the welcome screen has been implemented.
+Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and debug signing material are excluded from Git. At the end of Milestone 1, no app feature beyond the welcome screen had been implemented.
+
+## Verified Milestone 2 work
+
+- The single Android module now provides a capture-first Compose screen: type/paste a text note, save it, see recent notes, and open a read-only detail screen. Favourites, sharing, images, links, backend, authentication, synchronisation, indexing, and AI are not included.
+- `Room 3` is the device-local source of truth for notes and the one capture draft. Its generated version-1 schema is checked in for future non-destructive migration work; no destructive-migration fallback is configured.
+- The ViewModel holds transient screen state. Only the selected note ID uses `SavedStateHandle`; note bodies and draft content remain in Room rather than in Android saved instance state.
+- A changed draft is persisted after a 500 ms debounce. A monotonically increasing generation and a transaction that saves the note while acknowledging the draft prevent an older delayed write from restoring text after a save. If the owner types while a save is in progress, the newer text stays in the editor as the next draft.
+- The 500 ms debounce is a responsiveness/data-safety trade-off, not a promise that the final keystroke survives an immediate force-stop or device failure. Waiting at least one second before leaving the app gives the debounced write time to complete.
+- The manifest sets `allowBackup="false"` and explicitly excludes the Room database from cloud backup and device-transfer rules. This is a privacy policy for this local prototype, not a backup/restore feature; platform/vendor behaviour still needs a later resilience-milestone verification.
+- Instrumented tests ran against the authorised Samsung SM-S918U1 (Android 16/API 36) and passed for: transaction coordination against stale draft writes; failed duplicate save preserving the draft; repeated Save taps starting one save; failed save retaining/persisting input; and typing during an in-flight save retaining the newer draft. `lintDebug` and `assembleDebug` pass.
+- The owner verified save confirmation, recent-items display, read-only detail, offline capture/read, a debounced draft surviving close/reopen, and a saved note surviving a non-destructive `adb install -r` update. The updated app cold-launched with `MainActivity` focused on 2026-09-13.
 
 ## Confirmed context
 
@@ -36,7 +47,7 @@ Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and de
 
 ## Unresolved questions
 
-- Local database/scheduler and detailed accessibility targets for the first capture feature.
+- Detailed accessibility targets and a local scheduler beyond the current debounce.
 - Final home/navigation/ask interaction and visual direction.
 - Hosting/deployment topology, authentication configuration, persistent job/checkpoint technology, and worker environment.
 - AI/embedding candidates, licences, privacy, local/laptop/on-device feasibility, quality/latency targets, fallbacks, and budget.
@@ -47,8 +58,8 @@ Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and de
 
 Decisions should be made only when their milestone needs them, using current official evidence for time-sensitive provider/model claims.
 
-## Next proposed milestone
+## Next milestone
 
-Milestone 2 is the capture-first local text vault described in `roadmap.md`. Its design and implementation have not started.
+Milestone 2 is complete. Do not begin Milestone 3 automatically.
 
-Before Milestone 2, explain the relevant concepts and options, recommend a tightly bounded scope, and obtain owner agreement.
+The next proposed discussion is Milestone 3: authenticated backend and safe offline synchronisation. It requires separate owner agreement on hosting, authentication, secrets handling, API contracts, queues/retries, and test environments before implementation.
