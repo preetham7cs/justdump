@@ -4,7 +4,7 @@ Last updated: 2026-09-13
 
 ## Current state
 
-Milestones 0, 1, and 2 are complete. The local-text-vault debug build passes lint and assembly, focused persistence/coordination device tests pass, and the owner has verified the user-visible flow on the physical phone, including offline use, draft restoration, and retention across a non-destructive update.
+Milestones 0, 1, and 2 are complete. Milestone 3A is awaiting Supabase setup: a single-owner, explicit cloud upload/read-back experiment for text is approved. Supabase Free, Supabase Auth email/password, Supabase Postgres, FastAPI, Pydantic, Room as the Android UI source of truth, and deferred automatic background sync are agreed directions. No Supabase project, owner account, hosted API, credentials, backend, or Android cloud feature has yet been created or verified.
 
 ## Verified Milestone 1 work
 
@@ -58,8 +58,10 @@ Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and de
 
 Decisions should be made only when their milestone needs them, using current official evidence for time-sensitive provider/model claims.
 
-## Next milestone
+## Current milestone
 
-Milestone 2 is complete. Do not begin Milestone 3 automatically.
+Milestone 3A is limited to authenticated explicit text upload and authenticated cloud read-back for the single owner. Existing local notes must survive; automatic background sync is Milestone 3B, and AI features are out of scope.
 
-The next proposed discussion is Milestone 3: authenticated backend and safe offline synchronisation. It requires separate owner agreement on hosting, authentication, secrets handling, API contracts, queues/retries, and test environments before implementation.
+Prerequisite: the owner must create and configure the Supabase Free development project before implementation can connect to it. Render Free is the lowest-cost proposed API host but has not been enabled. No paid service is approved.
+
+The earliest proposed AI work is Milestone 3R, a text-only backend retrieval and evaluation baseline after 3A. It uses explicitly uploaded notes and does not require UI polish, additional formats, or Milestone 3B automatic sync.

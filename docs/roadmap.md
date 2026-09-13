@@ -26,13 +26,29 @@ Only one milestone is implemented at a time, after owner agreement. Each is a pr
 - **Verification:** Run focused repository and ViewModel device tests for persistence, failed saves, repeated Save taps, and draft/save coordination. On the phone, save/read notes, restart/reopen, test offline capture, and verify a draft after waiting for its documented debounce interval. Reinstall the debug app with `-r` over a saved note and confirm it remains.
 - **Completion criteria:** Notes remain readable after the agreed checks, the owner confirms the flow on the phone, and the UI does not expose unimplemented processing, cloud, or technical controls.
 
-## 3. Authenticated backend and safe offline sync
+## 3A. Authenticated explicit cloud sync for text (awaiting Supabase setup)
 
-- **Outcome:** The authenticated owner syncs text items with durable offline queuing, bounded retries, and clear offline/uploading/failed states.
-- **Learning objective:** API contracts, authentication, Pydantic validation, migrations, idempotency, content hashes, background scheduling, and sync state machines.
-- **Prerequisites:** Milestone 2; decide hosting, auth flow, Postgres setup, secrets handling, scheduler, and test environments.
-- **Verification:** Exercise authorised/unauthorised tests, repeat an upload, interrupt connectivity and app execution, then confirm eventual single-item sync.
-- **Completion criteria:** Only the owner accesses data; intentional saves are preserved; retry creates no duplicate logical record; status and recovery are understandable.
+- **Outcome:** The single authenticated owner can explicitly upload a text note to cloud storage and read it back through an authenticated API, while every existing local note and draft remains usable without a network.
+- **Learning objective:** API contracts, email/password authentication, Pydantic validation, Postgres migrations, owner scoping, idempotency, and truthful local/pending/synced/failed state.
+- **Prerequisites:** Milestone 2; owner creates a Supabase Free development project, chooses its region, configures the owner account, and supplies non-secret project configuration through an approved local mechanism. FastAPI hosting remains proposed.
+- **Verification:** Exercise authorised/unauthorised backend tests; explicitly upload a pre-existing note; repeat the same operation; read it back through the API; induce a failed upload; and confirm the local note remains readable and retryable.
+- **Completion criteria:** Only the authorised owner can read cloud notes; retries create no duplicate logical note; existing local IDs and contents survive; the owner verifies cloud acknowledgement by read-back on the physical phone; no automatic background sync is implied.
+
+## 3B. Automatic background text sync (deferred)
+
+- **Outcome:** Pending local text uploads resume safely after connectivity, app restarts, and device reboots, with bounded retry and clear status.
+- **Learning objective:** WorkManager, network constraints, durable outbox design, backoff, conflict policy, and recovery.
+- **Prerequisites:** Milestone 3A; agree queue schema, retry bounds, conflict semantics, and background-work behaviour.
+- **Verification:** Capture offline, restart/terminate the app, restore network, simulate transient failures, and confirm one eventual cloud record per logical note.
+- **Completion criteria:** The local source of truth remains usable and automatic work neither loses notes nor creates duplicates.
+
+## 3R. Text-only RAG and evaluation baseline (proposed after 3A)
+
+- **Outcome:** A small Python-backend experiment uses explicitly uploaded text notes to measure retrieval and source-grounded text answers before any Android question UI, media ingestion, or automatic sync work.
+- **Learning objective:** Corpus snapshots, relevance/evidence labels, Postgres full-text retrieval, source mapping, answer evaluation, abstention, and regression cases.
+- **Prerequisites:** Milestone 3A; approve a non-sensitive evaluation subset or an owner-authored question/evidence set, model/budget/privacy choices if generation is added, and provisional measures.
+- **Verification:** Run versioned retrieval/evaluation scripts against a fixed corpus; inspect supported, unsupported, and conflicting cases; preserve exact source-note IDs in results.
+- **Completion criteria:** A reproducible text-only baseline exists with per-question evidence and failure cases. Start with deterministic retrieval/source excerpts; retain a generative answer step only if an agreed evaluation demonstrates value.
 
 ## 4. Android sharing, links, and images
 
