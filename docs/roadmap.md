@@ -2,7 +2,7 @@
 
 Only one milestone is implemented at a time, after owner agreement. Each is a proposed boundary and may be split further. Demonstration, relevant tests/evaluations, learning notes, and progress updates are part of completion.
 
-## 0. Product foundation (current)
+## 0. Product foundation (complete)
 
 - **Outcome:** Requirements, UX direction, proposed architecture/model/evaluation strategies, working agreement, roadmap, progress log, and learning template tell one consistent story.
 - **Learning objective:** Separate behavioural requirements, architectural proposals, unresolved decisions, evaluation evidence, and verified progress.
@@ -10,12 +10,12 @@ Only one milestone is implemented at a time, after owner agreement. Each is a pr
 - **Verification:** Review links, terminology, scope, decision labels, and unresolved questions; confirm no application scaffold or dependency exists.
 - **Completion criteria:** Documents make no implementation claims, cover the stated product and AI-learning vision, and are accepted by the owner.
 
-## 1. Android app on the phone
+## 1. Android app on the phone (complete)
 
-- **Outcome:** A minimal JustDump app builds, installs, opens, and shows an identifiable static capture-oriented screen on the Samsung Galaxy S23 Ultra.
+- **Outcome:** A minimal JustDump app builds, installs, opens, and shows a `JustDump` welcome screen on the Samsung Galaxy S23 Ultra.
 - **Learning objective:** Android project structure, Gradle build variants, Compose UI, APK creation, device installation, and startup logs.
 - **Prerequisites:** Agree SDK/tool versions, application ID, minimum Android version independently of the test phone, and safe development signing; confirm phone connection method.
-- **Verification:** Run build checks, install the development APK, cold-open, rotate/reopen, and inspect logs for startup failures.
+- **Verification:** Run lint and build checks, verify debug signing, install the development APK, cold-open it, reopen it from the launcher icon, and inspect logs for startup failures.
 - **Completion criteria:** The owner completes the install/open steps; observed device/software details and commands are recorded; no capture, backend, or AI behaviour is implied.
 
 ## 2. Capture-first local text vault

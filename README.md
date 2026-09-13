@@ -4,7 +4,7 @@ JustDump is a durable personal knowledge application, initially for Android. It 
 
 ## Project status
 
-Implementation has **not started**. This repository currently contains product, architecture, roadmap, progress, and learning documentation only. Proposed technologies and unresolved decisions are not commitments.
+Milestone 1 is complete. The Android foundation under `apps/android/` builds, passes lint, installs, launches, displays `JustDump`, and reopens from its launcher icon on the physical test phone. No capture, storage, backend, authentication, or AI features exist yet. Proposed technologies and unresolved decisions are not commitments.
 
 ## Reference documents
 
@@ -18,4 +18,4 @@ Implementation has **not started**. This repository currently contains product, 
 - [Learning notes](docs/learning-notes.md)
 - [Contributor and agent working agreement](AGENTS.md)
 
-The eventual repository may contain `apps/android/`, `backend/`, `evals/`, `contracts/`, `infra/`, and `scripts/` as those areas become necessary. They should not be created before a milestone needs them.
+The repository may later add `backend/`, `evals/`, `contracts/`, `infra/`, and `scripts/` as milestones require them. They should not be created early merely to fill out a planned layout.

@@ -2,6 +2,8 @@
 
 This is a proposed architecture, not an implemented system. A choice marked **preferred** is a direction to evaluate, not a confirmed dependency. Choices become **confirmed** only after owner agreement and milestone evidence.
 
+The implemented Android foundation is one native application module using Kotlin and Jetpack Compose. Its confirmed identifiers are application ID `io.github.preetham7cs.justdump`, minimum SDK 26, and compile/target SDK 36. Standard debug signing is confirmed for development only; no product capabilities or later architecture components are implemented yet.
+
 ## Proposed components
 
 | Component | Proposed technology | Responsibility |
@@ -104,7 +106,7 @@ Model selection and task routing are specified in `model-strategy.md`. Hosted AP
 
 ## Decisions still to make
 
-- Minimum Android version, application ID, local database/scheduler, accessibility targets, and development signing.
+- Local database/scheduler and detailed Android accessibility targets.
 - Hosting and deployment topology; Supabase project/authentication configuration.
 - Job store, worker execution environment, checkpoints, and recovery targets.
 - Model and embedding candidates, execution location, hardware feasibility, licences, privacy, budgets, and fallbacks.

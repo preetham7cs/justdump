@@ -1,28 +1,30 @@
 # Progress
 
-Last updated: 2026-09-12
+Last updated: 2026-09-13
 
 ## Current state
 
-Milestone 0, product foundation, has been expanded and is prepared for owner review. Implementation has not started. No dependencies, application scaffolds, infrastructure, external services, deployments, automated tests, traces, experiments, or CI workflows have been created or verified.
+Milestones 0 and 1 are complete. The minimal Android app has been built, linted, debug-signed, installed, and launched on the physical test phone. Automated device inspection found the expected `JustDump` text in the focused activity and no matching fatal crash. The owner then confirmed that the welcome screen was visible and that JustDump reopened successfully from its launcher icon.
 
-## Documentation completed for review
+## Verified Milestone 1 work
 
-- Product behaviour now covers capture-first UX, truthful content states, initial versus long-term formats, provenance, deletion/recovery, and the physical test device.
-- Proposed architecture now covers the processing lifecycle, versioned derived data, separate ingestion/question flows, retrieval modes, and the distinction between a knowledge graph and LangGraph.
-- Graph-assisted retrieval is recorded as a preferred direction to evaluate, beginning with relationships in Postgres; a dedicated graph database has explicit evidence gates rather than being assumed.
-- Focused UX, model, and evaluation strategies now define proposed approaches without selecting providers, models, budgets, or unsupported device capabilities.
-- The roadmap introduces RAG, LangGraph, structured knowledge, graph-assisted search, task routing, later media research, and operations through small measurable milestones.
-- The learning template records reproducibility details and decision status.
+- Android Studio Quail 4 is installed; its bundled runtime is OpenJDK 25.0.3.
+- Android SDK Platform 36, Build Tools 36.0.0, and Platform Tools/ADB 37.0.1 are installed.
+- Wireless ADB detected and authorised the Samsung SM-S918U1. Device properties report Android 16, API 36, and Samsung One UI property `80500` (One UI 8.5).
+- `apps/android/` contains one `app` module using Kotlin and Jetpack Compose, application ID `io.github.preetham7cs.justdump`, minimum SDK 26, compile SDK 36, and target SDK 36.
+- The pinned build uses Android Gradle Plugin 9.4.0, Gradle wrapper 9.6.0, Kotlin/Compose compiler 2.3.21, Compose BOM 2026.04.01, and Activity Compose 1.11.0.
+- `gradlew.bat clean lintDebug assembleDebug` completed successfully. Final lint reported zero errors and six intentional version-availability warnings caused by the approved API 36/toolchain pins. The generated debug APK verified with an `Android Debug` certificate.
+- ADB streamed installation succeeded. A cold launch completed, Android reported `MainActivity` focused, the live UI hierarchy contained `JustDump`, and the crash buffer contained no matching fatal exception.
+- The owner visually confirmed the `JustDump` welcome screen and successfully reopened the app from its launcher icon on 2026-09-13.
 
-These are documentation drafts, not evidence of working behaviour. Milestone 0 remains incomplete until the owner accepts it.
+Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and debug signing material are excluded from Git. No app feature beyond the welcome screen has been implemented.
 
 ## Confirmed context
 
 - JustDump is initially a single-user Android application.
 - Initial formats are text, screenshots/images, and public article links; video links may be saved while full video processing and audio support are deferred.
-- The initial physical test device is a Samsung Galaxy S23 Ultra with user-reported Android 16 and One UI 8.5.
-- The first implementation milestone remains a minimal Android app installed and opened on that phone.
+- The initial physical test device is a Samsung Galaxy S23 Ultra (SM-S918U1), verified as Android 16/API 36 with Samsung One UI property `80500`.
+- Milestone 1 uses application ID `io.github.preetham7cs.justdump`, minimum SDK 26, compile/target SDK 36, and standard debug signing.
 - Development begins with a measurable retrieval baseline and introduces agentic behaviour only through evaluated increments.
 
 ## Proposed directions requiring later agreement
@@ -34,7 +36,7 @@ These are documentation drafts, not evidence of working behaviour. Milestone 0 r
 
 ## Unresolved questions
 
-- Android application ID, SDK/tool versions, minimum supported Android version, local database/scheduler, accessibility targets, development signing, and phone connection workflow.
+- Local database/scheduler and detailed accessibility targets for the first capture feature.
 - Final home/navigation/ask interaction and visual direction.
 - Hosting/deployment topology, authentication configuration, persistent job/checkpoint technology, and worker environment.
 - AI/embedding candidates, licences, privacy, local/laptop/on-device feasibility, quality/latency targets, fallbacks, and budget.
@@ -47,6 +49,6 @@ Decisions should be made only when their milestone needs them, using current off
 
 ## Next proposed milestone
 
-Milestone 1: build a minimal Android app, install it on the Samsung Galaxy S23 Ultra, and open it successfully.
+Milestone 2 is the capture-first local text vault described in `roadmap.md`. Its design and implementation have not started.
 
-Before implementation, discuss Android project structure, Compose and Gradle roles, SDK/application-ID options, minimum-version trade-offs, signing, and phone installation, then make a recommendation. Implementation starts only after owner agreement.
+Before Milestone 2, explain the relevant concepts and options, recommend a tightly bounded scope, and obtain owner agreement.
