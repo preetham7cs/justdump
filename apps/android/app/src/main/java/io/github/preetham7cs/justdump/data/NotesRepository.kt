@@ -19,6 +19,8 @@ class NotesRepository(
             noteDao.observeNote(id).map { it?.toNote() }
         }
 
+    override suspend fun getNote(id: String): Note? = noteDao.getNote(id)?.toNote()
+
     override fun observeDraft(): Flow<CaptureDraft> =
         noteDao.observeDraft().map { draft ->
             draft?.toDraft() ?: CaptureDraft(content = "", generation = 0, updatedAtEpochMillis = 0)
@@ -35,6 +37,15 @@ class NotesRepository(
             savedAtEpochMillis = note.updatedAtEpochMillis,
         )
     }
+
+    override suspend fun updateSyncState(
+        id: String,
+        status: NoteSyncStatus,
+        error: String?,
+        syncedAtEpochMillis: Long?,
+    ) {
+        noteDao.updateSyncState(id, status.name, error, syncedAtEpochMillis)
+    }
 }
 
 private fun NoteEntity.toNote() =
@@ -43,6 +54,9 @@ private fun NoteEntity.toNote() =
         content = content,
         createdAtEpochMillis = createdAtEpochMillis,
         updatedAtEpochMillis = updatedAtEpochMillis,
+        syncStatus = NoteSyncStatus.valueOf(syncStatus),
+        syncError = syncError,
+        syncedAtEpochMillis = syncedAtEpochMillis,
     )
 
 private fun Note.toEntity() =
@@ -51,6 +65,9 @@ private fun Note.toEntity() =
         content = content,
         createdAtEpochMillis = createdAtEpochMillis,
         updatedAtEpochMillis = updatedAtEpochMillis,
+        syncStatus = syncStatus.name,
+        syncError = syncError,
+        syncedAtEpochMillis = syncedAtEpochMillis,
     )
 
 private fun CaptureDraftEntity.toDraft() =

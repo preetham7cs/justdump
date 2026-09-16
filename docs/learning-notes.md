@@ -78,6 +78,44 @@ Instrumented tests passed on the physical Samsung for the five coordination/pers
 - Limitations or uncertainty: no system can promise the last keystroke survives an immediate force-stop before the debounce. `allowBackup=false` and database exclusions set a privacy policy, but backup/restore needs later explicit resilience-milestone verification.
 - Follow-up question: discuss and agree the next narrowly scoped milestone before implementing more features.
 
+## Entry: Explicit owner-scoped cloud text sync
+
+- **Date:** 2026-09-16
+- **Milestone:** 3A, authenticated explicit cloud upload/read-back
+- **Question or concept:** How can a local-first Android note be explicitly copied to cloud storage without exposing privileged credentials or letting retries create duplicate records?
+- **Why it matters to JustDump:** Cloud acknowledgement must add durable remote storage without weakening device-local capture or overstating backup/recovery guarantees.
+- **Decision status:** Confirmed for the local development experiment
+
+### Mental model
+
+Room remains the Android UI's source of truth. A local note has a stable UUID before any network action. The app signs the owner in through Supabase Auth, obtains a user session, and sends that user bearer token to FastAPI. FastAPI verifies the JWT from Supabase's public JWKS, checks the configured single-owner UUID, validates the request with Pydantic, then calls Supabase PostgREST with the same bearer token and only the publishable key.
+
+That last detail matters: the backend is an authentication and contract boundary, not a privileged database shortcut. Postgres RLS sees the owner JWT; the SQL RPC is `security invoker`; and the database function makes `(owner_id, client_note_id)` unique. An identical retry returns the existing immutable record. A different body for that local ID is a conflict rather than a silent overwrite.
+
+### Options and hypothesis
+
+- Options considered: direct Android-to-database access; a backend using a service-role key; or FastAPI forwarding the caller's JWT to PostgREST.
+- Trade-offs: direct access reduces code but weakens a server-side contract boundary; service-role access would bypass RLS and increases credential risk; caller-token forwarding adds a hop but preserves RLS and owner scoping.
+- Expected result and reason: Room status transitions from pending to uploading to synced only after a separate cloud read-back matches the local ID and content. A failed request must leave the local note readable and retryable.
+
+### Experiment
+
+- Setup and fixed inputs: Supabase Free project with one auto-confirmed owner and public sign-ups disabled; local FastAPI/Pydantic runtime; Android debug build on Samsung SM-S918U1 Android 16/API 36; ADB reverse to the laptop loopback API.
+- Steps or command: run backend contract tests, Android lint/build and instrumented persistence tests; sign in on the phone; explicitly upload one note; retry the same upload; inspect the resulting cloud table row; close/reopen the app.
+- Metric or observable result: unauthenticated API access returns 401; a signed-in owner receives cloud read-back confirmation; repeated upload leaves one cloud row; the local note remains readable across failure/retry and reopen.
+- Conditions that would falsify the hypothesis: missing/privileged credential in the APK, a non-owner reaching cloud data, duplicate rows from repeat upload, a failed request deleting local content, or a sync label without successful read-back.
+
+### Results
+
+Backend tests passed 6/6, including missing-token rejection, non-owner rejection, repeat upload/read-back, and immutable-ID conflict. Android lint/build and focused persistence instrumentation passed. A real owner sign-in, explicit phone upload, and authenticated cloud read-back succeeded. Repeating verification retained one cloud row. Safe setup failures occurred during development, but each left the local note readable and retryable; the final retry succeeded. The owner closed/reopened the app and confirmed the local note and verified state remained.
+
+### Conclusion
+
+- What was learned: authentication, ownership, idempotency, and confirmation are separate concerns. A visible “synced” state should represent an acknowledged and read-back cloud record, not merely a dispatched HTTP request.
+- Decision: retain Room as the local UI source of truth, explicit upload only, Supabase Auth email/password, owner UUID check in FastAPI, caller-token PostgREST access under RLS, and stable local UUIDs for idempotency.
+- Limitations or uncertainty: the API runs only on the laptop for this experiment; no hosted deployment, automatic retry, background sync, backup/restore promise, deletion workflow, or AI processing exists. The Supabase project is not a substitute for a tested recovery plan.
+- Follow-up question: separately choose between Milestone 3B automatic sync and Milestone 3R text-only retrieval/evaluation; neither is authorised by this result.
+
 ## Entry: _title_
 
 - **Date:** YYYY-MM-DD

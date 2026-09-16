@@ -9,6 +9,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.preetham7cs.justdump.data.CaptureDraft
 import io.github.preetham7cs.justdump.data.Note
 import io.github.preetham7cs.justdump.data.NotesDataSource
+import io.github.preetham7cs.justdump.cloud.NoteSyncCoordinator
+import io.github.preetham7cs.justdump.cloud.SyncAttemptResult
 import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +31,7 @@ data class NotesUiState(
     val inputError: String? = null,
     val saveError: String? = null,
     val saveNotice: SaveNotice? = null,
+    val syncingNoteId: String? = null,
 )
 
 data class SaveNotice(
@@ -39,6 +42,7 @@ data class SaveNotice(
 class NotesViewModel(
     private val repository: NotesDataSource,
     private val savedStateHandle: SavedStateHandle,
+    private val syncCoordinator: NoteSyncCoordinator? = null,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(NotesUiState())
     val uiState: StateFlow<NotesUiState> = mutableUiState
@@ -47,6 +51,7 @@ class NotesViewModel(
     private var nextNoticeId = 0L
     private var draftWriteJob: Job? = null
     private var saveJob: Job? = null
+    private var syncJob: Job? = null
 
     init {
         observeRecentNotes()
@@ -146,6 +151,29 @@ class NotesViewModel(
         }
     }
 
+    fun uploadNote(noteId: String) {
+        if (syncJob?.isActive == true || mutableUiState.value.syncingNoteId != null) return
+        val coordinator = syncCoordinator ?: return
+        mutableUiState.update { it.copy(syncingNoteId = noteId) }
+        syncJob = viewModelScope.launch {
+            when (val result = coordinator.uploadAndVerify(noteId)) {
+                SyncAttemptResult.Success -> mutableUiState.update {
+                    it.copy(
+                        syncingNoteId = null,
+                        saveNotice = SaveNotice(nextNoticeId++, "Cloud read-back verified"),
+                    )
+                }
+
+                is SyncAttemptResult.Failure -> mutableUiState.update {
+                    it.copy(
+                        syncingNoteId = null,
+                        saveNotice = SaveNotice(nextNoticeId++, result.message),
+                    )
+                }
+            }
+        }
+    }
+
     private fun observeRecentNotes() {
         viewModelScope.launch {
             repository.observeRecentNotes().collect { notes ->
@@ -202,12 +230,13 @@ class NotesViewModel(
         const val DRAFT_DEBOUNCE_MILLIS = 500L
         private const val SELECTED_NOTE_ID = "selected_note_id"
 
-        fun factory(repository: NotesDataSource) =
+        fun factory(repository: NotesDataSource, syncCoordinator: NoteSyncCoordinator? = null) =
             viewModelFactory {
                 initializer {
                     NotesViewModel(
                         repository = repository,
                         savedStateHandle = createSavedStateHandle(),
+                        syncCoordinator = syncCoordinator,
                     )
                 }
             }

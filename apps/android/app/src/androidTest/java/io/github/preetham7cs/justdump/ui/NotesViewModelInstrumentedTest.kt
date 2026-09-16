@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.preetham7cs.justdump.data.CaptureDraft
 import io.github.preetham7cs.justdump.data.Note
+import io.github.preetham7cs.justdump.data.NoteSyncStatus
 import io.github.preetham7cs.justdump.data.NotesDataSource
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
@@ -88,6 +89,8 @@ private open class FakeRepository : NotesDataSource {
 
     override fun observeNote(id: String?): Flow<Note?> = flowOf(notes.value.firstOrNull { it.id == id })
 
+    override suspend fun getNote(id: String): Note? = notes.value.firstOrNull { it.id == id }
+
     override fun observeDraft(): Flow<CaptureDraft> = draft
 
     override suspend fun persistDraftIfNewer(draft: CaptureDraft) {
@@ -101,6 +104,17 @@ private open class FakeRepository : NotesDataSource {
         savedGeneration = savedDraftGeneration
         if (draft.value.generation <= savedDraftGeneration) {
             draft.value = CaptureDraft("", savedDraftGeneration, note.updatedAtEpochMillis)
+        }
+    }
+
+    override suspend fun updateSyncState(
+        id: String,
+        status: NoteSyncStatus,
+        error: String?,
+        syncedAtEpochMillis: Long?,
+    ) {
+        notes.value = notes.value.map { note ->
+            if (note.id == id) note.copy(syncStatus = status, syncError = error, syncedAtEpochMillis = syncedAtEpochMillis) else note
         }
     }
 }

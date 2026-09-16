@@ -2,15 +2,15 @@
 
 This is a proposed architecture, not an implemented system. A choice marked **preferred** is a direction to evaluate, not a confirmed dependency. Choices become **confirmed** only after owner agreement and milestone evidence.
 
-The implemented Android client is one native application module using Kotlin and Jetpack Compose. Its confirmed identifiers are application ID `io.github.preetham7cs.justdump`, minimum SDK 26, and compile/target SDK 36. Standard debug signing is confirmed for development only. Milestone 2 adds a Room 3 device-local database for text notes and one capture draft; it is not yet a cloud-synchronised or indexed knowledge store. Milestone 3A is approved as a single-owner, explicit cloud-upload/read-back experiment using Supabase Auth/Postgres and a FastAPI/Pydantic API; service provisioning and implementation evidence remain pending.
+The implemented Android client is one native application module using Kotlin and Jetpack Compose. Its confirmed identifiers are application ID `io.github.preetham7cs.justdump`, minimum SDK 26, and compile/target SDK 36. Standard debug signing is confirmed for development only. Milestone 2 adds a Room 3 device-local database for text notes and one capture draft. Milestone 3A adds verified single-owner email/password sign-in and explicit text upload/read-back through a locally run FastAPI/Pydantic API to Supabase Auth/Postgres. Room remains the UI source of truth; automatic sync, hosted delivery, indexing, and AI remain unimplemented.
 
 ## Proposed components
 
 | Component | Proposed technology | Responsibility |
 | --- | --- | --- |
-| Android client | Kotlin, Jetpack Compose, Room 3 | Capture text locally, display recent notes, and read saved notes. Sharing, sync, questions, and source navigation remain proposed. Room is the confirmed device-local store; a scheduler is unresolved. |
-| HTTP API | Python, FastAPI, and Pydantic | Approved direction for Milestone 3A: validate authenticated text-sync contracts and return owner-scoped notes. Hosting remains proposed. |
-| Primary data store | Supabase Postgres with pgvector | Approved direction for Milestone 3A text records and owner identity. pgvector, extracted content, chunks, provenance, and relationships remain later work. |
+| Android client | Kotlin, Jetpack Compose, Room 3 | Capture/read text locally; owner sign-in; explicit note upload and matching cloud read-back. Room is the confirmed local UI source of truth. Sharing, automatic sync, questions, and source navigation remain proposed. |
+| HTTP API | Python, FastAPI, and Pydantic | Verify a Supabase owner JWT, validate text-note contracts, and return owner-scoped notes. Verified locally only; hosting remains proposed. |
+| Primary data store | Supabase Postgres with pgvector | Confirmed for Milestone 3A owner-scoped text records under RLS. pgvector, extracted content, chunks, provenance, and relationships remain later work. |
 | Object storage | Supabase object storage | Proposed store for originals and binary payloads, separate from derived representations. |
 | Persistent job system | Unresolved | Durably enqueue processing, lease work, bound retries, and record partial/terminal failures. |
 | Python worker | Framework unresolved | Execute versioned extraction and indexing steps idempotently and report status. |

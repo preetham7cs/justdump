@@ -7,9 +7,18 @@ interface NotesDataSource {
 
     fun observeNote(id: String?): Flow<Note?>
 
+    suspend fun getNote(id: String): Note?
+
     fun observeDraft(): Flow<CaptureDraft>
 
     suspend fun persistDraftIfNewer(draft: CaptureDraft)
 
     suspend fun saveNoteAndAcknowledgeDraft(note: Note, savedDraftGeneration: Long)
+
+    suspend fun updateSyncState(
+        id: String,
+        status: NoteSyncStatus,
+        error: String?,
+        syncedAtEpochMillis: Long?,
+    )
 }

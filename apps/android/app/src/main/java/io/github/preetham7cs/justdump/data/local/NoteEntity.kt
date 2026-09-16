@@ -9,4 +9,7 @@ data class NoteEntity(
     val content: String,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
+    val syncStatus: String,
+    val syncError: String?,
+    val syncedAtEpochMillis: Long?,
 )

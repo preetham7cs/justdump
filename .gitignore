@@ -1,2 +1,8 @@
 .idea/
 *.iml
+backend/.env
+backend/.venv/
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/*.egg-info/
+apps/android/justdump.local.properties

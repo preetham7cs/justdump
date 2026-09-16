@@ -1,0 +1,15 @@
+# Copy this file to justdump.local.properties and fill it locally.
+# The copied file is ignored by Git. These first two values are publishable
+# Android configuration, not privileged credentials. Never add a service-role
+# key, database password, or SMTP credential here.
+
+# Supabase Dashboard -> Project Settings -> API -> Project URL
+JUSTDUMP_SUPABASE_URL=https://jzbnrqejvjcpwmyghnri.supabase.co
+
+# Supabase Dashboard -> Project Settings -> API -> Publishable key
+JUSTDUMP_SUPABASE_PUBLISHABLE_KEY=sb_publishable_97AB8mh0vJz3lfkflgVfJg_TskDc0gp
+
+# Leave empty until the FastAPI development server is available. This must be
+# an HTTPS public URL for a deployed service; a local development address will
+# be configured separately for the physical-phone test.
+JUSTDUMP_API_BASE_URL=

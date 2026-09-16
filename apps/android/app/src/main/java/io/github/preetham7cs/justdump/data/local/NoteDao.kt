@@ -15,6 +15,9 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
     fun observeNote(id: String): Flow<NoteEntity?>
 
+    @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
+    suspend fun getNote(id: String): NoteEntity?
+
     @Query("SELECT * FROM capture_draft WHERE id = 1 LIMIT 1")
     fun observeDraft(): Flow<CaptureDraftEntity?>
 
@@ -23,6 +26,17 @@ interface NoteDao {
 
     @Insert
     suspend fun insertNote(note: NoteEntity)
+
+    @Query(
+        "UPDATE notes SET syncStatus = :status, syncError = :error, syncedAtEpochMillis = :syncedAtEpochMillis " +
+            "WHERE id = :id",
+    )
+    suspend fun updateSyncState(
+        id: String,
+        status: String,
+        error: String?,
+        syncedAtEpochMillis: Long?,
+    )
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun replaceDraft(draft: CaptureDraftEntity)

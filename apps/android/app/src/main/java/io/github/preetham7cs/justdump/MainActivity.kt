@@ -40,10 +40,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.preetham7cs.justdump.data.Note
+import io.github.preetham7cs.justdump.data.NoteSyncStatus
+import io.github.preetham7cs.justdump.ui.AccountUiState
+import io.github.preetham7cs.justdump.ui.AccountViewModel
 import io.github.preetham7cs.justdump.ui.NotesUiState
 import io.github.preetham7cs.justdump.ui.NotesViewModel
 import java.time.Instant
@@ -53,21 +57,29 @@ import java.time.format.FormatStyle
 
 class MainActivity : ComponentActivity() {
     private val notesViewModel: NotesViewModel by viewModels {
-        NotesViewModel.factory((application as JustDumpApplication).notesRepository)
+        val app = application as JustDumpApplication
+        NotesViewModel.factory(app.notesRepository, app.noteSyncCoordinator)
+    }
+    private val accountViewModel: AccountViewModel by viewModels {
+        AccountViewModel.factory((application as JustDumpApplication).authRepository)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            JustDumpApp(notesViewModel)
+            JustDumpApp(notesViewModel, accountViewModel)
         }
     }
 }
 
 @Composable
-private fun JustDumpApp(viewModel: NotesViewModel) {
+private fun JustDumpApp(
+    viewModel: NotesViewModel,
+    accountViewModel: AccountViewModel,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val accountUiState by accountViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.saveNotice?.id) {
@@ -84,11 +96,19 @@ private fun JustDumpApp(viewModel: NotesViewModel) {
                 onDraftChanged = viewModel::onDraftChanged,
                 onSave = viewModel::saveDraftAsNote,
                 onOpenNote = viewModel::openNote,
+                onUploadNote = viewModel::uploadNote,
+                accountUiState = accountUiState,
+                onEmailChanged = accountViewModel::onEmailChanged,
+                onPasswordChanged = accountViewModel::onPasswordChanged,
+                onSignIn = accountViewModel::signIn,
+                onSignOut = accountViewModel::signOut,
             )
         } else {
             NoteDetailScreen(
                 note = uiState.selectedNote,
                 onBack = viewModel::returnToCapture,
+                onUploadNote = viewModel::uploadNote,
+                isSyncing = uiState.syncingNoteId == uiState.selectedNoteId,
             )
         }
     }
@@ -102,6 +122,12 @@ private fun CaptureAndRecentsScreen(
     onDraftChanged: (String) -> Unit,
     onSave: () -> Unit,
     onOpenNote: (String) -> Unit,
+    onUploadNote: (String) -> Unit,
+    accountUiState: AccountUiState,
+    onEmailChanged: (String) -> Unit,
+    onPasswordChanged: (String) -> Unit,
+    onSignIn: () -> Unit,
+    onSignOut: () -> Unit,
 ) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("JustDump") }) },
@@ -114,6 +140,16 @@ private fun CaptureAndRecentsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                AccountCard(
+                    state = accountUiState,
+                    onEmailChanged = onEmailChanged,
+                    onPasswordChanged = onPasswordChanged,
+                    onSignIn = onSignIn,
+                    onSignOut = onSignOut,
+                )
+            }
+
             item {
                 Text(
                     text = "Capture a note",
@@ -182,7 +218,12 @@ private fun CaptureAndRecentsScreen(
                 }
             } else {
                 items(uiState.recentNotes, key = Note::id) { note ->
-                    NoteRow(note = note, onClick = { onOpenNote(note.id) })
+                    NoteRow(
+                        note = note,
+                        onClick = { onOpenNote(note.id) },
+                        onUpload = { onUploadNote(note.id) },
+                        isSyncing = uiState.syncingNoteId == note.id,
+                    )
                 }
             }
         }
@@ -193,6 +234,8 @@ private fun CaptureAndRecentsScreen(
 private fun NoteRow(
     note: Note,
     onClick: () -> Unit,
+    onUpload: () -> Unit,
+    isSyncing: Boolean,
 ) {
     Card(
         modifier = Modifier
@@ -218,6 +261,17 @@ private fun NoteRow(
                 text = formatTimestamp(note.createdAtEpochMillis),
                 style = MaterialTheme.typography.labelSmall,
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(syncLabel(note), style = MaterialTheme.typography.labelSmall)
+            TextButton(onClick = onUpload, enabled = !isSyncing) {
+                Text(
+                    when {
+                        isSyncing -> "Uploading"
+                        note.syncStatus == NoteSyncStatus.SYNCED -> "Verify cloud copy again"
+                        else -> "Upload and verify"
+                    },
+                )
+            }
         }
     }
 }
@@ -227,6 +281,8 @@ private fun NoteRow(
 private fun NoteDetailScreen(
     note: Note?,
     onBack: () -> Unit,
+    onUploadNote: (String) -> Unit,
+    isSyncing: Boolean,
 ) {
     BackHandler(onBack = onBack)
     Scaffold(
@@ -254,6 +310,17 @@ private fun NoteDetailScreen(
                     .padding(16.dp),
             ) {
                 Text("Saved on this device", style = MaterialTheme.typography.labelMedium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(syncLabel(note), style = MaterialTheme.typography.labelSmall)
+                TextButton(onClick = { onUploadNote(note.id) }, enabled = !isSyncing) {
+                    Text(
+                        when {
+                            isSyncing -> "Uploading"
+                            note.syncStatus == NoteSyncStatus.SYNCED -> "Verify cloud copy again"
+                            else -> "Upload and verify"
+                        },
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(formatTimestamp(note.createdAtEpochMillis), style = MaterialTheme.typography.labelSmall)
                 Spacer(modifier = Modifier.height(16.dp))
@@ -261,6 +328,58 @@ private fun NoteDetailScreen(
             }
         }
     }
+}
+
+@Composable
+private fun AccountCard(
+    state: AccountUiState,
+    onEmailChanged: (String) -> Unit,
+    onPasswordChanged: (String) -> Unit,
+    onSignIn: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Cloud account", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(4.dp))
+            val signedInEmail = state.signedInEmail
+            if (signedInEmail != null) {
+                Text("Signed in as $signedInEmail", style = MaterialTheme.typography.bodyMedium)
+                Text("Uploads are explicit. Saved notes stay on this device.", style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = onSignOut, enabled = !state.isWorking) { Text("Sign out") }
+            } else if (!state.configured) {
+                Text("Supabase is not configured on this development build.", color = MaterialTheme.colorScheme.error)
+            } else {
+                OutlinedTextField(
+                    value = state.email,
+                    onValueChange = onEmailChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Email") },
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = state.password,
+                    onValueChange = onPasswordChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                )
+                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                TextButton(onClick = onSignIn, enabled = !state.isWorking) {
+                    Text(if (state.isWorking) "Signing in" else "Sign in")
+                }
+            }
+        }
+    }
+}
+
+private fun syncLabel(note: Note): String = when (note.syncStatus) {
+    NoteSyncStatus.PENDING_UPLOAD -> "Saved on this device — upload pending"
+    NoteSyncStatus.UPLOADING -> "Uploading and verifying cloud copy…"
+    NoteSyncStatus.SYNCED -> "Cloud copy verified — still saved on this device"
+    NoteSyncStatus.FAILED -> note.syncError ?: "Upload failed — local note is still available"
 }
 
 private fun formatTimestamp(epochMillis: Long): String =
@@ -278,6 +397,12 @@ private fun CaptureAndRecentsPreview() {
             onDraftChanged = {},
             onSave = {},
             onOpenNote = {},
+            onUploadNote = {},
+            accountUiState = AccountUiState(configured = true),
+            onEmailChanged = {},
+            onPasswordChanged = {},
+            onSignIn = {},
+            onSignOut = {},
         )
     }
 }

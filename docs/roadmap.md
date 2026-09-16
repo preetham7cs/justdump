@@ -26,13 +26,13 @@ Only one milestone is implemented at a time, after owner agreement. Each is a pr
 - **Verification:** Run focused repository and ViewModel device tests for persistence, failed saves, repeated Save taps, and draft/save coordination. On the phone, save/read notes, restart/reopen, test offline capture, and verify a draft after waiting for its documented debounce interval. Reinstall the debug app with `-r` over a saved note and confirm it remains.
 - **Completion criteria:** Notes remain readable after the agreed checks, the owner confirms the flow on the phone, and the UI does not expose unimplemented processing, cloud, or technical controls.
 
-## 3A. Authenticated explicit cloud sync for text (awaiting Supabase setup)
+## 3A. Authenticated explicit cloud sync for text (complete)
 
 - **Outcome:** The single authenticated owner can explicitly upload a text note to cloud storage and read it back through an authenticated API, while every existing local note and draft remains usable without a network.
 - **Learning objective:** API contracts, email/password authentication, Pydantic validation, Postgres migrations, owner scoping, idempotency, and truthful local/pending/synced/failed state.
-- **Prerequisites:** Milestone 2; owner creates a Supabase Free development project, chooses its region, configures the owner account, and supplies non-secret project configuration through an approved local mechanism. FastAPI hosting remains proposed.
+- **Prerequisites:** Milestone 2; Supabase Free development project, owner account, and ignored non-secret local configuration. FastAPI hosting remains proposed.
 - **Verification:** Exercise authorised/unauthorised backend tests; explicitly upload a pre-existing note; repeat the same operation; read it back through the API; induce a failed upload; and confirm the local note remains readable and retryable.
-- **Completion criteria:** Only the authorised owner can read cloud notes; retries create no duplicate logical note; existing local IDs and contents survive; the owner verifies cloud acknowledgement by read-back on the physical phone; no automatic background sync is implied.
+- **Completion criteria:** Met on 2026-09-16: the authorised owner uploaded/read back a note on the physical phone; repeated explicit verification retained one cloud row; failed attempts retained the local note; and local content survived app reopen. No automatic background sync is implied.
 
 ## 3B. Automatic background text sync (deferred)
 

@@ -1,10 +1,10 @@
 # Progress
 
-Last updated: 2026-09-13
+Last updated: 2026-09-16
 
 ## Current state
 
-Milestones 0, 1, and 2 are complete. Milestone 3A is awaiting Supabase setup: a single-owner, explicit cloud upload/read-back experiment for text is approved. Supabase Free, Supabase Auth email/password, Supabase Postgres, FastAPI, Pydantic, Room as the Android UI source of truth, and deferred automatic background sync are agreed directions. No Supabase project, owner account, hosted API, credentials, backend, or Android cloud feature has yet been created or verified.
+Milestones 0, 1, 2, and 3A are complete. Milestone 3A verifies one owner signing in and explicitly uploading a device-local text note through a locally running FastAPI API to Supabase Postgres, followed by authenticated cloud read-back. Supabase Free, email/password Auth, owner-scoped RLS, FastAPI/Pydantic, and Room as the Android UI source of truth are confirmed for this development experiment. There is no hosted API, automatic sync, backup guarantee, AI processing, retrieval, or additional content format.
 
 ## Verified Milestone 1 work
 
@@ -30,6 +30,16 @@ Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and de
 - Instrumented tests ran against the authorised Samsung SM-S918U1 (Android 16/API 36) and passed for: transaction coordination against stale draft writes; failed duplicate save preserving the draft; repeated Save taps starting one save; failed save retaining/persisting input; and typing during an in-flight save retaining the newer draft. `lintDebug` and `assembleDebug` pass.
 - The owner verified save confirmation, recent-items display, read-only detail, offline capture/read, a debounced draft surviving close/reopen, and a saved note surviving a non-destructive `adb install -r` update. The updated app cold-launched with `MainActivity` focused on 2026-09-13.
 
+## Verified Milestone 3A work
+
+- Supabase Free project setup is complete for one owner account. Public sign-ups are disabled. The Android application contains only the Supabase Project URL and publishable key through an ignored local properties file; the owner UUID remains in ignored backend configuration. No database password, service-role key, signing key, token, or personal content is tracked.
+- The local FastAPI/Pydantic API verifies the caller's Supabase JWT against the project's JWKS and separately checks that its `sub` equals the configured owner UUID. It then calls Supabase PostgREST using the caller's bearer token plus the publishable key, so Postgres RLS applies; it does not use a privileged database or service credential.
+- Supabase migrations create `text_notes` with a composite `(owner_id, client_note_id)` key, owner-only select/insert RLS policies, and a `security invoker` RPC. The RPC returns the existing record for the same stable local ID and immutable content, and rejects reuse of that ID with different content. Corrective migration `0002` qualifies `extensions.digest` for Supabase's extension schema without altering rows.
+- Room migrated non-destructively from version 1 to 2, adding only local sync metadata. Existing note IDs and bodies remain intact. Room remains the UI source of truth: a local save starts as pending; explicit upload moves through uploading; only a matching authenticated cloud read-back marks it synced; failure leaves the local note readable and retryable.
+- Backend contract tests passed (6/6), including missing-token rejection, non-owner rejection before cloud access, idempotent repeat upload/read-back, and immutable-ID conflict. Android `lintDebug`, `assembleDebug`, and focused instrumented persistence tests passed on the authorised Samsung SM-S918U1 (Android 16/API 36).
+- The owner signed in on the phone, uploaded a text note, received **Cloud read-back verified**, repeated verification without creating a second `text_notes` row, closed/reopened the app, and confirmed the locally stored note and cloud-verified state remained. Earlier safe failures left the local note readable and retryable before the successful retry.
+- FastAPI is **not deployed**. The verified 3A cloud path runs on the owner's laptop and reaches the phone through a temporary ADB reverse rule, so sign-in/upload/read-back testing requires the laptop API process to be running. Device-local capture and reading do not require the laptop or network.
+
 ## Confirmed context
 
 - JustDump is initially a single-user Android application.
@@ -37,6 +47,7 @@ Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and de
 - The initial physical test device is a Samsung Galaxy S23 Ultra (SM-S918U1), verified as Android 16/API 36 with Samsung One UI property `80500`.
 - Milestone 1 uses application ID `io.github.preetham7cs.justdump`, minimum SDK 26, compile/target SDK 36, and standard debug signing.
 - Development begins with a measurable retrieval baseline and introduces agentic behaviour only through evaluated increments.
+- Milestone 3A uses explicit user-triggered uploads only. Automatic retry/background sync remains Milestone 3B; cloud storage is not described as a backup.
 
 ## Proposed directions requiring later agreement
 
@@ -60,8 +71,6 @@ Decisions should be made only when their milestone needs them, using current off
 
 ## Current milestone
 
-Milestone 3A is limited to authenticated explicit text upload and authenticated cloud read-back for the single owner. Existing local notes must survive; automatic background sync is Milestone 3B, and AI features are out of scope.
+No implementation milestone is active. Milestone 3B automatic background text sync and Milestone 3R text-only retrieval/evaluation both require separate discussion and agreement. The earliest proposed AI work remains 3R, using explicitly uploaded notes without requiring UI polish, additional formats, or 3B.
 
-Prerequisite: the owner must create and configure the Supabase Free development project before implementation can connect to it. Render Free is the lowest-cost proposed API host but has not been enabled. No paid service is approved.
-
-The earliest proposed AI work is Milestone 3R, a text-only backend retrieval and evaluation baseline after 3A. It uses explicitly uploaded notes and does not require UI polish, additional formats, or Milestone 3B automatic sync.
+Render remains only a proposed API host. No hosted service or paid option has been enabled.
