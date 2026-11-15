@@ -4,7 +4,7 @@ JustDump is a durable personal knowledge application, initially for Android. It 
 
 ## Project status
 
-Milestones 1 and 2 are complete. The Android app now has a verified device-local text vault: capture a note, save it, browse recent notes, read a note, and retain one draft after reopening. It has no cloud backup or synchronisation, backend, authentication, indexing, or AI capability. Proposed technologies and unresolved decisions are not commitments.
+Milestones 1, 2, and 3A are complete. The Android app has a verified device-local text vault and explicit owner-authenticated cloud upload/read-back through a laptop-local FastAPI process. Milestone 3R synthetic retrieval/evaluation work is in progress and unverified. There is no hosted API, automatic synchronisation, cloud backup guarantee, or Android question UI. Proposed technologies and unresolved decisions are not commitments.
 
 ## Reference documents
 

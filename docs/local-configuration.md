@@ -31,6 +31,10 @@ In **Authentication -> Users**, open the one owner account and copy its user UUI
 
 Leave this blank until the FastAPI endpoint is running. Put the endpoint base URL in the Android local properties file only. The verified local phone workflow uses an ADB reverse rule and a debug-only loopback URL; it is not a LAN or deployed endpoint. A future hosted endpoint must use HTTPS.
 
+### `OPENAI_API_KEY`
+
+For the approved Milestone 3R synthetic experiment, create a project-scoped API key in the OpenAI API platform and put it in `backend/.env` only. Do not use a ChatGPT session, subscription, or Android configuration as an API credential. Configure the provider project to permit only the agreed models, turn off automatic credit replenishment, and set the approved $1 limit before a model call. The application also has its own strict budget ledger because provider alerts are not the same as an immediate application-side refusal.
+
 ## Deliberately not requested
 
 Do not enter or share a database password, connection string, Supabase `service_role`/secret key, SMTP password, personal note content, or access token. The Milestone 3A FastAPI runtime verifies a signed owner JWT and calls Supabase PostgREST with that same JWT plus the publishable key. Postgres Row Level Security therefore applies to API reads and writes instead of being bypassed by a privileged backend credential.

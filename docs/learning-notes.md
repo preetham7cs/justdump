@@ -116,6 +116,36 @@ Backend tests passed 6/6, including missing-token rejection, non-owner rejection
 - Limitations or uncertainty: the API runs only on the laptop for this experiment; no hosted deployment, automatic retry, background sync, backup/restore promise, deletion workflow, or AI processing exists. The Supabase project is not a substitute for a tested recovery plan.
 - Follow-up question: separately choose between Milestone 3B automatic sync and Milestone 3R text-only retrieval/evaluation; neither is authorised by this result.
 
+## Entry: Synthetic retrieval and grounded-answer baseline
+
+- **Date:** 2026-09-16
+- **Milestone:** 3R, text-only RAG baseline
+- **Question or concept:** Does vector retrieval improve a small fixed text corpus over transparent full-text search, while answers remain tied to source-note IDs?
+- **Why it matters to JustDump:** Retrieval must earn added cost and complexity before an Android question UI, LangGraph, or personal-vault model processing is considered.
+- **Decision status:** Verified experiment; under owner review
+
+### Mental model
+
+Full-text search ranks overlapping terms. Embeddings represent passages and questions as vectors, so cosine similarity can retrieve paraphrases even when exact words differ. Neither retrieval method proves an answer true: the answer model receives only retrieved evidence and must cite original note IDs. A citation ID is structurally valid only if it came from that retrieval result; human review still decides whether the cited text supports the claim.
+
+### Experiment
+
+- **Setup and fixed inputs:** six synthetic cloud notes; five development and three held-out questions; owner JWT/RLS; explicit indexed fixture IDs only; `token-500-overlap-75-v1`; top three deduplicated note IDs.
+- **Models:** `text-embedding-3-small` for vector mode and `gpt-5-mini` with the same strict structured-answer prompt in both modes.
+- **Measures:** note-level Recall@3, MRR, deterministic citation-ID validity, abstention/conflict expectation flags, and manual answer-support/completeness review.
+- **Privacy and cost:** no personal notes were selected automatically. Redacted reports omit text, questions, answers, tokens, and credentials. A durable local ledger reserved before calls; actual reconciled provider usage was $0.013036, under the $1 cap.
+
+### Results
+
+Full-text reached development Recall@3/MRR of 0.70/0.60 and held-out 0.67/0.33. Vector retrieval reached 1.00/0.80 and 1.00/0.67 respectively. Every reported citation ID was within retrieved source IDs. Vector retrieval found both expected conflict notes, but the answer path abstained after a generated response could not be validated; it did not invent a resolution or emit an uncited answer.
+
+### Conclusion
+
+- **What was learned:** retrieval and answer grounding are separate gates. Better candidates improve evidence recall but do not guarantee conflict handling or complete answers.
+- **Decision:** retain full-text as a transparent baseline and retain vector retrieval as a measured comparison. After the baseline, add a narrow ISO-date conflict guard: require both conflict citations and use a deterministic conflict summary if structured generation is malformed. A direct synthetic contract test passed after increasing the bounded answer allowance from 350 to 800 tokens.
+- **Limitations or uncertainty:** the corpus is too small and synthetic to establish general quality. Raw answer support/completeness needs human review. No conclusion applies to personal notes.
+- **Follow-up question:** does a minimal typed LangGraph retrieve -> answer/abstain wrapper with privacy-aware tracing improve the same held-out cases enough to justify its added complexity?
+
 ## Entry: _title_
 
 - **Date:** YYYY-MM-DD

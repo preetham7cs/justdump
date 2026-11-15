@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AnyHttpUrl, UUID4
+from pydantic import AnyHttpUrl, SecretStr, UUID4
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     justdump_supabase_url: AnyHttpUrl
     justdump_supabase_publishable_key: str
     justdump_owner_id: UUID4
+    openai_api_key: SecretStr | None = None
+    justdump_rag_experiment_budget_usd: float = 1.00
 
     @property
     def auth_issuer(self) -> str:

@@ -1,6 +1,14 @@
 # Roadmap
 
-Only one milestone is implemented at a time, after owner agreement. Each is a proposed boundary and may be split further. Demonstration, relevant tests/evaluations, learning notes, and progress updates are part of completion.
+The historic roadmap below records the project’s incremental learning sequence. For the authorised v1 delivery run, it is executed continuously through small, verified checkpoints rather than pausing for separate milestone approvals. Demonstration, relevant tests/evaluations, learning notes, and truthful progress updates remain required.
+
+## v1 continuous delivery directive
+
+Status: **active continuous delivery.** The owner approved up to $10/month for AI use, OpenAI processing of their own selected text, images, and public links, redacted-only LangSmith tracing, and verified commits/pushes. Paid hosting is deliberately deferred until the locally testable v1 is ready.
+
+The delivery run will commit the reviewed 3R baseline; add polished capture/browse for text, images, links, and Android sharing; add durable automatic sync and processing; deploy FastAPI; add private object storage, safe ingestion, owner-scoped retrieval, a bounded LangGraph Q&A flow, Android Ask/sources, export/restore, and physical-device acceptance. Existing local notes, owner configuration, and the debug signing identity must be preserved.
+
+Personal text, images, and public links may be sent to OpenAI only for the owner's selected captures, within the $10/month AI budget and application-side limits. LangSmith remains metadata/redaction-only unless separately approved. Supabase will provide Postgres, Auth, Storage, Queues, and Cron. The existing Python FastAPI/LangGraph service remains local until a later hosting decision; the laptop-off acceptance check is therefore deferred, not waived.
 
 ## 0. Product foundation (complete)
 

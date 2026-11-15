@@ -4,7 +4,7 @@ Last updated: 2026-09-16
 
 ## Current state
 
-Milestones 0, 1, 2, and 3A are complete. Milestone 3A verifies one owner signing in and explicitly uploading a device-local text note through a locally running FastAPI API to Supabase Postgres, followed by authenticated cloud read-back. Supabase Free, email/password Auth, owner-scoped RLS, FastAPI/Pydantic, and Room as the Android UI source of truth are confirmed for this development experiment. There is no hosted API, automatic sync, backup guarantee, AI processing, retrieval, or additional content format.
+Milestones 0, 1, 2, and 3A are complete. Milestone 3R has a verified synthetic-only cloud retrieval/answer experiment and is awaiting owner review; it is not yet accepted as complete. Milestone 3A verifies one owner signing in and explicitly uploading a device-local text note through a locally running FastAPI API to Supabase Postgres, followed by authenticated cloud read-back. Supabase Free, email/password Auth, owner-scoped RLS, FastAPI/Pydantic, and Room as the Android UI source of truth are confirmed for this development experiment. There is no hosted API, automatic sync, backup guarantee, or Android AI feature.
 
 ## Verified Milestone 1 work
 
@@ -48,6 +48,9 @@ Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and de
 - Milestone 1 uses application ID `io.github.preetham7cs.justdump`, minimum SDK 26, compile/target SDK 36, and standard debug signing.
 - Development begins with a measurable retrieval baseline and introduces agentic behaviour only through evaluated increments.
 - Milestone 3A uses explicit user-triggered uploads only. Automatic retry/background sync remains Milestone 3B; cloud storage is not described as a backup.
+- **2026-11-15:** Continuous v1 delivery replaces separate milestone approvals. The owner authorises verified local commits and pushes to `origin/main`; no force push. Paid hosting/deployment remains deferred until the locally testable v1 is ready.
+- **2026-11-15:** Up to $10/month is authorised for OpenAI API use. The owner approves OpenAI processing of their selected personal text, images/screenshots, and public links/extracted text for v1 ingestion and Q&A. LangSmith remains limited to redacted operational metadata until further approval.
+- **2026-11-15:** Supabase remains the Auth/Postgres/pgvector/object-storage foundation and will also be evaluated for durable queues and scheduling. Its Edge Functions are TypeScript/Deno, so they do not directly host the existing Python FastAPI/LangGraph service. Render or another Python host remains a later decision; laptop-off hosted verification is deferred, not removed.
 
 ## Proposed directions requiring later agreement
 
@@ -69,8 +72,8 @@ Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and de
 
 Decisions should be made only when their milestone needs them, using current official evidence for time-sensitive provider/model claims.
 
-## Current milestone
+## Current delivery state
 
-No implementation milestone is active. Milestone 3B automatic background text sync and Milestone 3R text-only retrieval/evaluation both require separate discussion and agreement. The earliest proposed AI work remains 3R, using explicitly uploaded notes without requiring UI polish, additional formats, or 3B.
+Milestone 3R is the verified retrieval baseline to be committed at the first delivery checkpoint. Migration 0003 was applied, and the deliberately synthetic `evals/synthetic/v1` corpus was uploaded through the authenticated API, then indexed explicitly. The fixed FTS/vector development and held-out runs completed; their redacted reports are ignored, while [the tracked results summary](../evals/synthetic/v1/results-summary.md) records measured Recall@3/MRR, citation validity, abstention, conflict failures, and the $0.013036 actual provider usage. A subsequent synthetic conflict refinement is verified locally and by a direct model contract check: conflicting dates cause a required dual-citation conflict answer, with a deterministic dual-citation fallback for malformed model output. The complete evaluation report set has not yet been rerun after that refinement. Only explicit fixture IDs were indexed; existing personal notes were not selected automatically. Continuous delivery now proceeds with local-first Android capture, durable sync/outbox, Supabase storage/processing, LangGraph Q&A, and phone verification. Hosted Python delivery remains deferred pending an explicit provider decision.
 
 Render remains only a proposed API host. No hosted service or paid option has been enabled.
