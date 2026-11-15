@@ -1,5 +1,7 @@
 package io.github.preetham7cs.justdump.data
 
+import android.content.Context
+import io.github.preetham7cs.justdump.cloud.SyncScheduler
 import io.github.preetham7cs.justdump.data.local.CaptureDraftEntity
 import io.github.preetham7cs.justdump.data.local.NoteDao
 import io.github.preetham7cs.justdump.data.local.NoteEntity
@@ -7,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class NotesRepository(
+    private val context: Context,
     private val noteDao: NoteDao,
 ) : NotesDataSource {
     override fun observeRecentNotes(): Flow<List<Note>> =
@@ -36,6 +39,7 @@ class NotesRepository(
             savedDraftGeneration = savedDraftGeneration,
             savedAtEpochMillis = note.updatedAtEpochMillis,
         )
+        SyncScheduler.enqueue(context)
     }
 
     override suspend fun updateSyncState(

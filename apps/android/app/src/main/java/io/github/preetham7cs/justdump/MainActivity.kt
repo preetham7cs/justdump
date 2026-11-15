@@ -1,6 +1,9 @@
 package io.github.preetham7cs.justdump
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.webkit.URLUtil
 import android.graphics.BitmapFactory
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -77,6 +80,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 class MainActivity : ComponentActivity() {
+    private var pendingSharedCapture by mutableStateOf<SharedCapture?>(null)
     private val notesViewModel: NotesViewModel by viewModels {
         val app = application as JustDumpApplication
         NotesViewModel.factory(app.notesRepository, app.noteSyncCoordinator)
@@ -93,10 +97,37 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        pendingSharedCapture = intent.toSharedCapture()
         setContent {
-            JustDumpApp(notesViewModel, accountViewModel, vaultViewModel)
+            JustDumpApp(
+                notesViewModel,
+                accountViewModel,
+                vaultViewModel,
+                pendingSharedCapture,
+                onSharedCaptureHandled = { pendingSharedCapture = null },
+            )
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingSharedCapture = intent.toSharedCapture()
+    }
+}
+
+private sealed interface SharedCapture {
+    data class Text(val value: String) : SharedCapture
+    data class Image(val uri: Uri) : SharedCapture
+}
+
+private fun Intent?.toSharedCapture(): SharedCapture? {
+    if (this?.action != Intent.ACTION_SEND) return null
+    @Suppress("DEPRECATION")
+    val image = getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+    if (image != null && type?.startsWith("image/") == true) return SharedCapture.Image(image)
+    val text = getStringExtra(Intent.EXTRA_TEXT)?.trim().orEmpty()
+    return text.takeIf { it.isNotBlank() }?.let(SharedCapture::Text)
 }
 
 @Composable
@@ -104,6 +135,8 @@ private fun JustDumpApp(
     viewModel: NotesViewModel,
     accountViewModel: AccountViewModel,
     vaultViewModel: VaultViewModel,
+    sharedCapture: SharedCapture?,
+    onSharedCaptureHandled: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val accountUiState by accountViewModel.uiState.collectAsStateWithLifecycle()
@@ -112,6 +145,21 @@ private fun JustDumpApp(
     var showLinkCapture by remember { mutableStateOf(false) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) vaultViewModel.saveImage(uri)
+    }
+
+    LaunchedEffect(sharedCapture) {
+        when (val capture = sharedCapture) {
+            is SharedCapture.Image -> vaultViewModel.saveImage(capture.uri)
+            is SharedCapture.Text -> {
+                if (URLUtil.isHttpUrl(capture.value) || URLUtil.isHttpsUrl(capture.value)) {
+                    vaultViewModel.saveLink(capture.value)
+                } else {
+                    viewModel.saveSharedText(capture.value)
+                }
+            }
+            null -> Unit
+        }
+        if (sharedCapture != null) onSharedCaptureHandled()
     }
 
     LaunchedEffect(uiState.saveNotice?.id) {

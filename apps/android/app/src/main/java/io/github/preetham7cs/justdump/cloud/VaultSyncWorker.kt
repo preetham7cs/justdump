@@ -21,7 +21,11 @@ class VaultSyncWorker(appContext: Context, params: WorkerParameters) : Coroutine
         var retry = false
         pending.forEach { item ->
             when (item.kind) {
-                VaultItemKind.TEXT -> Unit // Text has its existing explicit, verified upload action.
+                VaultItemKind.TEXT -> {
+                    // The same idempotent upload/read-back contract powers both the
+                    // visible retry action and the durable background outbox.
+                    app.noteSyncCoordinator.uploadAndVerify(item.id)
+                }
                 VaultItemKind.IMAGE, VaultItemKind.LINK -> {
                     val result = uploadMediaItem(app, item, token)
                     retry = retry || result

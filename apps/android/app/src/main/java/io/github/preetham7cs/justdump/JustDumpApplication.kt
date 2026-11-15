@@ -13,7 +13,7 @@ class JustDumpApplication : Application() {
     private val database by lazy { JustDumpDatabase.create(this) }
 
     val notesRepository: NotesRepository by lazy {
-        NotesRepository(database.noteDao())
+        NotesRepository(this, database.noteDao())
     }
 
     val vaultRepository: VaultRepository by lazy {

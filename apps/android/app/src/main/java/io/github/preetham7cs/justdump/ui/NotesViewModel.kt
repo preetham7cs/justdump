@@ -135,6 +135,29 @@ class NotesViewModel(
         }
     }
 
+    /** Saves shared text without changing a draft that may already be open. */
+    fun saveSharedText(content: String) {
+        val text = content.trim()
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            runCatching {
+                repository.saveNoteAndAcknowledgeDraft(
+                    Note(UUID.randomUUID().toString(), text, now, now),
+                    Long.MIN_VALUE,
+                )
+            }.onSuccess {
+                mutableUiState.update {
+                    it.copy(saveNotice = SaveNotice(nextNoticeId++, "Shared text saved on this device"))
+                }
+            }.onFailure {
+                mutableUiState.update {
+                    it.copy(saveNotice = SaveNotice(nextNoticeId++, "Could not save shared text on this device."))
+                }
+            }
+        }
+    }
+
     fun openNote(noteId: String) {
         savedStateHandle[SELECTED_NOTE_ID] = noteId
         mutableUiState.update { it.copy(selectedNoteId = noteId) }
