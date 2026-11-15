@@ -6,7 +6,7 @@ import httpx
 from fastapi import HTTPException, status
 
 from .config import Settings
-from .models import CloudTextNote, EvidenceChunk, TextNoteWrite
+from .models import CloudTextNote, CloudVaultItem, EvidenceChunk, TextNoteWrite, VaultItemWrite
 from .retrieval import TextChunk
 
 
@@ -79,6 +79,47 @@ class SupabaseGateway:
         )
         self._raise_for_response(response)
         return [CloudTextNote.model_validate(record) for record in response.json()]
+
+    async def upsert_vault_item(self, access_token: str, item: VaultItemWrite) -> CloudVaultItem:
+        response = await self._client.post(
+            f"{self._settings.rest_url}/rpc/upsert_vault_item",
+            headers={**self._headers(access_token), "Content-Type": "application/json"},
+            json={
+                "p_client_item_id": str(item.client_item_id), "p_kind": item.kind,
+                "p_source_url": item.source_url, "p_original_object_path": item.original_object_path,
+                "p_mime_type": item.mime_type, "p_content_sha256": item.content_sha256,
+                "p_created_at": item.created_at.isoformat(), "p_updated_at": item.updated_at.isoformat(),
+            },
+        )
+        self._raise_for_response(response)
+        return CloudVaultItem.model_validate(self._one_record(response.json()))
+
+    async def upload_original(
+        self, access_token: str, path: str, mime_type: str, content: bytes,
+    ) -> None:
+        response = await self._client.post(
+            f"{str(self._settings.justdump_supabase_url).rstrip('/')}/storage/v1/object/justdump-originals/{path}",
+            headers={**self._headers(access_token), "Content-Type": mime_type, "x-upsert": "false"},
+            content=content,
+        )
+        # A retry after a successful object upload should continue to the
+        # idempotent metadata RPC rather than manufacture a duplicate object.
+        if response.status_code == status.HTTP_409_CONFLICT:
+            return
+        self._raise_for_response(response)
+
+    async def get_vault_item(self, access_token: str, client_item_id: UUID) -> CloudVaultItem | None:
+        response = await self._client.get(
+            f"{self._settings.rest_url}/vault_items",
+            headers=self._headers(access_token),
+            params={
+                "select": "client_item_id,kind,source_url,original_object_path,mime_type,processing_status,processing_error",
+                "client_item_id": f"eq.{client_item_id}",
+            },
+        )
+        self._raise_for_response(response)
+        records = response.json()
+        return CloudVaultItem.model_validate(records[0]) if records else None
 
     async def has_matching_chunks(
         self, access_token: str, note: CloudTextNote, chunking_version: str

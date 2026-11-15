@@ -44,6 +44,40 @@ class OwnerIdentity(BaseModel):
     owner_id: UUID
 
 
+class VaultItemWrite(BaseModel):
+    """Immutable metadata for a locally captured image or public link."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    client_item_id: UUID
+    kind: Literal["IMAGE", "LINK"]
+    source_url: str | None = Field(default=None, max_length=8_000)
+    original_object_path: str | None = Field(default=None, max_length=512)
+    mime_type: str = Field(max_length=100)
+    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    created_at: datetime
+    updated_at: datetime
+
+    @field_validator("created_at", "updated_at")
+    @classmethod
+    def item_timestamp_must_include_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("timestamps must include a timezone")
+        return value
+
+
+class CloudVaultItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    client_item_id: UUID
+    kind: Literal["IMAGE", "LINK"]
+    source_url: str | None
+    original_object_path: str | None
+    mime_type: str | None
+    processing_status: str
+    processing_error: str | None
+
+
 class RetrievalIndexRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

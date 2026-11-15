@@ -27,6 +27,12 @@ interface NoteDao {
     @Insert
     suspend fun insertNote(note: NoteEntity)
 
+    @Insert
+    suspend fun insertVaultItem(item: VaultItemEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun enqueueSync(operation: SyncOutboxEntity)
+
     @Query(
         "UPDATE notes SET syncStatus = :status, syncError = :error, syncedAtEpochMillis = :syncedAtEpochMillis " +
             "WHERE id = :id",
@@ -37,6 +43,20 @@ interface NoteDao {
         error: String?,
         syncedAtEpochMillis: Long?,
     )
+
+    @Query(
+        "UPDATE vault_items SET syncStatus = :status, syncError = :error, syncedAtEpochMillis = :syncedAtEpochMillis " +
+            "WHERE id = :id",
+    )
+    suspend fun updateVaultSyncState(
+        id: String,
+        status: String,
+        error: String?,
+        syncedAtEpochMillis: Long?,
+    )
+
+    @Query("DELETE FROM sync_outbox WHERE itemId = :itemId")
+    suspend fun removeSyncOperation(itemId: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun replaceDraft(draft: CaptureDraftEntity)
@@ -56,6 +76,31 @@ interface NoteDao {
         savedAtEpochMillis: Long,
     ) {
         insertNote(note)
+        insertVaultItem(
+            VaultItemEntity(
+                id = note.id,
+                kind = "TEXT",
+                textContent = note.content,
+                sourceUrl = null,
+                localFilePath = null,
+                mimeType = "text/plain",
+                createdAtEpochMillis = note.createdAtEpochMillis,
+                updatedAtEpochMillis = note.updatedAtEpochMillis,
+                syncStatus = note.syncStatus,
+                syncError = note.syncError,
+                syncedAtEpochMillis = note.syncedAtEpochMillis,
+            ),
+        )
+        enqueueSync(
+            SyncOutboxEntity(
+                itemId = note.id,
+                operation = "UPSERT",
+                createdAtEpochMillis = note.updatedAtEpochMillis,
+                attemptCount = 0,
+                nextAttemptAtEpochMillis = null,
+                lastError = null,
+            ),
+        )
 
         val storedDraft = getDraft()
         if (storedDraft == null || storedDraft.generation <= savedDraftGeneration) {
@@ -67,5 +112,17 @@ interface NoteDao {
                 ),
             )
         }
+    }
+
+    @Transaction
+    suspend fun updateSyncStateAndOutbox(
+        id: String,
+        status: String,
+        error: String?,
+        syncedAtEpochMillis: Long?,
+    ) {
+        updateSyncState(id, status, error, syncedAtEpochMillis)
+        updateVaultSyncState(id, status, error, syncedAtEpochMillis)
+        if (status == "SYNCED") removeSyncOperation(id)
     }
 }

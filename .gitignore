@@ -8,3 +8,5 @@ backend/*.egg-info/
 backend/.justdump-rag-budget.sqlite3
 evals/reports/
 apps/android/justdump.local.properties
+apps/android/.gradle-user-home/
+apps/android/.kotlin/

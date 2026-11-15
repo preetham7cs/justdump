@@ -10,6 +10,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
@@ -17,6 +18,8 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
 
 class CloudNotesApi {
@@ -61,12 +64,25 @@ class CloudNotesApi {
 
 private suspend fun io.ktor.client.statement.HttpResponse.requireCloudNote(): CloudNotePayload {
     if (!status.isSuccess()) {
-        throw CloudRequestException(status.value)
+        // The API deliberately returns short, user-safe `detail` strings. Do not
+        // expose a raw response body: proxies and future providers can include
+        // diagnostics that are not appropriate for the device UI.
+        val detail = runCatching {
+            Json.parseToJsonElement(bodyAsText())
+                .jsonObject["detail"]
+                ?.jsonPrimitive
+                ?.content
+                ?.takeIf { it.length <= 180 && it.all { character -> !character.isISOControl() } }
+        }.getOrNull()
+        throw CloudRequestException(status.value, detail)
     }
     return body()
 }
 
-class CloudRequestException(val statusCode: Int) : Exception("Cloud request failed with HTTP $statusCode")
+class CloudRequestException(
+    val statusCode: Int,
+    val safeDetail: String?,
+) : Exception("Cloud request failed with HTTP $statusCode")
 
 @Serializable
 private data class TextNoteWritePayload(

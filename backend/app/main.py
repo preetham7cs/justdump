@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
+from hashlib import sha256
 from typing import Annotated
 from uuid import UUID
 
@@ -9,7 +11,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from .auth import Principal, SupabaseJwtVerifier
 from .config import Settings, get_settings
 from .conflicts import DateConflict, detect_date_conflict
-from .models import CloudTextNote, OwnerIdentity, TextNoteWrite
+from .models import CloudTextNote, CloudVaultItem, OwnerIdentity, TextNoteWrite, VaultItemWrite
 from .models import AnswerResponse, RetrievalIndexRequest, RetrievalIndexResult, RetrievalQuery, RetrievalResult
 from .evaluation import citations_are_valid
 from .openai_gateway import EMBEDDING_MODEL, OpenAiGateway, ProviderRequestError
@@ -100,6 +102,52 @@ def create_app(
                 detail="No cloud note exists with that local ID for this account.",
             )
         return note
+
+    @app.post("/v1/vault-items", response_model=CloudVaultItem, status_code=status.HTTP_201_CREATED)
+    async def upload_link_item(item: VaultItemWrite, request: OwnerRequest) -> CloudVaultItem:
+        if item.kind != "LINK":
+            raise HTTPException(status_code=422, detail="Use the image upload endpoint for images.")
+        _, access_token = request
+        return await gateway.upsert_vault_item(access_token, item)
+
+    @app.get("/v1/vault-items/{client_item_id}", response_model=CloudVaultItem)
+    async def read_vault_item(client_item_id: UUID, request: OwnerRequest) -> CloudVaultItem:
+        _, access_token = request
+        item = await gateway.get_vault_item(access_token, client_item_id)
+        if item is None:
+            raise HTTPException(status_code=404, detail="No cloud item exists with that local ID for this account.")
+        return item
+
+    @app.post("/v1/vault-items/images/{client_item_id}", response_model=CloudVaultItem, status_code=status.HTTP_201_CREATED)
+    async def upload_image_item(
+        raw_request: Request,
+        client_item_id: UUID,
+        created_at: datetime,
+        updated_at: datetime,
+        request: OwnerRequest,
+    ) -> CloudVaultItem:
+        principal, access_token = request
+        mime_type = raw_request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if mime_type not in {"image/jpeg", "image/png", "image/webp", "image/heic"}:
+            raise HTTPException(status_code=422, detail="Only JPEG, PNG, WebP, and HEIC images are supported.")
+        content = await raw_request.body()
+        if not content or len(content) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=422, detail="Images must be between 1 byte and 10 MB.")
+        extension = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic"}[mime_type]
+        object_path = f"{principal.user_id}/{client_item_id}/original.{extension}"
+        await gateway.upload_original(access_token, object_path, mime_type, content)
+        return await gateway.upsert_vault_item(
+            access_token,
+            VaultItemWrite(
+                client_item_id=client_item_id,
+                kind="IMAGE",
+                original_object_path=object_path,
+                mime_type=mime_type,
+                content_sha256=sha256(content).hexdigest(),
+                created_at=created_at,
+                updated_at=updated_at,
+            ),
+        )
 
     def openai_gateway() -> OpenAiGateway:
         if settings.openai_api_key is None:

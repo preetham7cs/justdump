@@ -1,16 +1,22 @@
 package io.github.preetham7cs.justdump
 
 import android.os.Bundle
+import android.graphics.BitmapFactory
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,7 +27,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -32,13 +40,19 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,10 +60,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.preetham7cs.justdump.data.Note
 import io.github.preetham7cs.justdump.data.NoteSyncStatus
+import io.github.preetham7cs.justdump.data.VaultItem
+import io.github.preetham7cs.justdump.data.VaultItemKind
 import io.github.preetham7cs.justdump.ui.AccountUiState
 import io.github.preetham7cs.justdump.ui.AccountViewModel
+import io.github.preetham7cs.justdump.ui.JustDumpTheme
 import io.github.preetham7cs.justdump.ui.NotesUiState
 import io.github.preetham7cs.justdump.ui.NotesViewModel
+import io.github.preetham7cs.justdump.ui.VaultUiState
+import io.github.preetham7cs.justdump.ui.VaultViewModel
+import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -63,12 +83,15 @@ class MainActivity : ComponentActivity() {
     private val accountViewModel: AccountViewModel by viewModels {
         AccountViewModel.factory((application as JustDumpApplication).authRepository)
     }
+    private val vaultViewModel: VaultViewModel by viewModels {
+        VaultViewModel.factory((application as JustDumpApplication).vaultRepository)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            JustDumpApp(notesViewModel, accountViewModel)
+            JustDumpApp(notesViewModel, accountViewModel, vaultViewModel)
         }
     }
 }
@@ -77,19 +100,42 @@ class MainActivity : ComponentActivity() {
 private fun JustDumpApp(
     viewModel: NotesViewModel,
     accountViewModel: AccountViewModel,
+    vaultViewModel: VaultViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val accountUiState by accountViewModel.uiState.collectAsStateWithLifecycle()
+    val vaultUiState by vaultViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showLinkCapture by remember { mutableStateOf(false) }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) vaultViewModel.saveImage(uri)
+    }
 
     LaunchedEffect(uiState.saveNotice?.id) {
         val notice = uiState.saveNotice ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(notice.message)
         viewModel.onSaveNoticeShown(notice.id)
     }
+    LaunchedEffect(vaultUiState.message) {
+        val message = vaultUiState.message ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message)
+        vaultViewModel.clearMessage()
+    }
 
-    MaterialTheme {
-        if (uiState.selectedNoteId == null) {
+    JustDumpTheme {
+        when {
+            uiState.selectedNoteId != null -> {
+                NoteDetailScreen(
+                    note = uiState.selectedNote,
+                    onBack = viewModel::returnToCapture,
+                    onUploadNote = viewModel::uploadNote,
+                    isSyncing = uiState.syncingNoteId == uiState.selectedNoteId,
+                )
+            }
+            vaultUiState.selectedItemId != null -> {
+                VaultItemDetailScreen(vaultUiState.selectedItem, vaultViewModel::closeItem)
+            }
+            else -> {
             CaptureAndRecentsScreen(
                 uiState = uiState,
                 snackbarHostState = snackbarHostState,
@@ -102,13 +148,17 @@ private fun JustDumpApp(
                 onPasswordChanged = accountViewModel::onPasswordChanged,
                 onSignIn = accountViewModel::signIn,
                 onSignOut = accountViewModel::signOut,
+                vaultUiState = vaultUiState,
+                onPickImage = { imagePicker.launch("image/*") },
+                onAddLink = { showLinkCapture = true },
+                onOpenVaultItem = vaultViewModel::openItem,
             )
-        } else {
-            NoteDetailScreen(
-                note = uiState.selectedNote,
-                onBack = viewModel::returnToCapture,
-                onUploadNote = viewModel::uploadNote,
-                isSyncing = uiState.syncingNoteId == uiState.selectedNoteId,
+            }
+        }
+        if (showLinkCapture) {
+            LinkCaptureDialog(
+                onDismiss = { showLinkCapture = false },
+                onSave = { url -> vaultViewModel.saveLink(url); showLinkCapture = false },
             )
         }
     }
@@ -128,11 +178,12 @@ private fun CaptureAndRecentsScreen(
     onPasswordChanged: (String) -> Unit,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
+    vaultUiState: VaultUiState,
+    onPickImage: () -> Unit,
+    onAddLink: () -> Unit,
+    onOpenVaultItem: (String) -> Unit,
 ) {
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("JustDump") }) },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { innerPadding ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -140,6 +191,17 @@ private fun CaptureAndRecentsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                Column(modifier = Modifier.padding(top = 18.dp, bottom = 8.dp)) {
+                    Text("JustDump", style = MaterialTheme.typography.displaySmall)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "A quiet place for what you want to keep.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             item {
                 AccountCard(
                     state = accountUiState,
@@ -151,8 +213,14 @@ private fun CaptureAndRecentsScreen(
             }
 
             item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().animateContentSize(),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Capture a note",
+                    text = "Capture",
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -196,7 +264,13 @@ private fun CaptureAndRecentsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(if (uiState.isSaving) "Saving" else "Save")
+                    Text(if (uiState.isSaving) "Saving" else "Keep this")
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = onPickImage, enabled = !vaultUiState.isSaving) { Text("Add image") }
+                    TextButton(onClick = onAddLink, enabled = !vaultUiState.isSaving) { Text("Save link") }
+                }
+                    }
                 }
             }
 
@@ -204,8 +278,8 @@ private fun CaptureAndRecentsScreen(
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Recent notes",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "Recent",
+                    style = MaterialTheme.typography.headlineSmall,
                 )
             }
 
@@ -224,6 +298,102 @@ private fun CaptureAndRecentsScreen(
                         onUpload = { onUploadNote(note.id) },
                         isSyncing = uiState.syncingNoteId == note.id,
                     )
+                }
+            }
+
+            if (vaultUiState.items.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Images & links", style = MaterialTheme.typography.headlineSmall)
+                }
+                items(vaultUiState.items, key = VaultItem::id) { item ->
+                    VaultItemRow(item = item, onClick = { onOpenVaultItem(item.id) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VaultItemRow(item: VaultItem, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (item.kind == VaultItemKind.IMAGE) {
+                LocalImage(item.localFilePath, modifier = Modifier.width(72.dp).height(72.dp))
+                Spacer(modifier = Modifier.width(14.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    if (item.kind == VaultItemKind.IMAGE) "Image" else "Saved link",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                val detail = when (item.kind) {
+                    VaultItemKind.IMAGE -> item.mimeType ?: "Image saved on this device"
+                    VaultItemKind.LINK -> item.sourceUrl ?: "Link saved on this device"
+                    VaultItemKind.TEXT -> item.textContent.orEmpty()
+                }
+                Text(detail, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(5.dp))
+                Text("Saved on this device", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LocalImage(path: String?, modifier: Modifier = Modifier) {
+    val bitmap = remember(path) { path?.let { BitmapFactory.decodeFile(it)?.asImageBitmap() } }
+    if (bitmap == null) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) { Text("Image") }
+    } else {
+        Image(bitmap = bitmap, contentDescription = "Saved image", modifier = modifier, contentScale = ContentScale.Crop)
+    }
+}
+
+@Composable
+private fun LinkCaptureDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var url by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Save a link") },
+        text = {
+            TextField(
+                value = url,
+                onValueChange = { url = it },
+                label = { Text("Public http or https URL") },
+                singleLine = true,
+            )
+        },
+        confirmButton = { TextButton(onClick = { onSave(url) }, enabled = url.isNotBlank()) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun VaultItemDetailScreen(item: VaultItem?, onBack: () -> Unit) {
+    BackHandler(onBack = onBack)
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Saved item") }, navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }) },
+    ) { innerPadding ->
+        if (item == null) {
+            Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) { Text("This item is unavailable.") }
+        } else {
+            Column(Modifier.fillMaxSize().padding(innerPadding).padding(20.dp)) {
+                Text("Saved on this device", style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.height(12.dp))
+                when (item.kind) {
+                    VaultItemKind.IMAGE -> LocalImage(item.localFilePath, Modifier.fillMaxWidth().heightIn(max = 420.dp))
+                    VaultItemKind.LINK -> {
+                        Text(item.sourceUrl.orEmpty(), style = MaterialTheme.typography.bodyLarge)
+                        Spacer(Modifier.height(12.dp))
+                        Text("The original URL is saved. Article extraction has not run yet.", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    VaultItemKind.TEXT -> Text(item.textContent.orEmpty(), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
@@ -390,7 +560,7 @@ private fun formatTimestamp(epochMillis: Long): String =
 @Preview(showBackground = true)
 @Composable
 private fun CaptureAndRecentsPreview() {
-    MaterialTheme {
+    JustDumpTheme {
         CaptureAndRecentsScreen(
             uiState = NotesUiState(draftReady = true),
             snackbarHostState = remember { SnackbarHostState() },
@@ -403,6 +573,10 @@ private fun CaptureAndRecentsPreview() {
             onPasswordChanged = {},
             onSignIn = {},
             onSignOut = {},
+            vaultUiState = VaultUiState(),
+            onPickImage = {},
+            onAddLink = {},
+            onOpenVaultItem = {},
         )
     }
 }

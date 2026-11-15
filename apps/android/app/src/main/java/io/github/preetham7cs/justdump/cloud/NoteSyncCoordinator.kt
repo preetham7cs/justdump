@@ -36,7 +36,10 @@ class NoteSyncCoordinator(
                 SyncAttemptResult.Failure("Cloud read-back did not match this local note.")
             }
         } catch (error: CloudRequestException) {
-            val message = "Cloud request was rejected (HTTP ${error.statusCode}). The local note is still available."
+            val message = buildString {
+                append(error.safeDetail ?: "Cloud request was rejected (HTTP ${error.statusCode}).")
+                append(" The local note is still available.")
+            }
             notes.updateSyncState(
                 noteId,
                 NoteSyncStatus.FAILED,

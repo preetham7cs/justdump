@@ -44,7 +44,7 @@ class NotesRepository(
         error: String?,
         syncedAtEpochMillis: Long?,
     ) {
-        noteDao.updateSyncState(id, status.name, error, syncedAtEpochMillis)
+        noteDao.updateSyncStateAndOutbox(id, status.name, error, syncedAtEpochMillis)
     }
 }
 
