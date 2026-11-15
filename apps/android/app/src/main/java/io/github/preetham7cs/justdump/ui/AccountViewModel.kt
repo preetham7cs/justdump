@@ -21,6 +21,7 @@ data class AccountUiState(
 
 class AccountViewModel(
     private val auth: SupabaseAuthRepository,
+    private val onSignedIn: () -> Unit = {},
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(
         AccountUiState(
@@ -49,6 +50,7 @@ class AccountViewModel(
         viewModelScope.launch {
             try {
                 auth.signIn(state.email, state.password)
+                onSignedIn()
                 mutableUiState.update {
                     it.copy(
                         signedInEmail = auth.emailOrNull(),
@@ -74,8 +76,8 @@ class AccountViewModel(
     }
 
     companion object {
-        fun factory(auth: SupabaseAuthRepository) = viewModelFactory {
-            initializer { AccountViewModel(auth) }
+        fun factory(auth: SupabaseAuthRepository, onSignedIn: () -> Unit = {}) = viewModelFactory {
+            initializer { AccountViewModel(auth, onSignedIn) }
         }
     }
 }

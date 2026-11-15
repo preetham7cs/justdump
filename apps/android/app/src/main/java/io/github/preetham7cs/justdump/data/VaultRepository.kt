@@ -1,6 +1,5 @@
 package io.github.preetham7cs.justdump.data
 
-import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.webkit.URLUtil
@@ -13,6 +12,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import io.github.preetham7cs.justdump.cloud.SyncScheduler
 
 class VaultRepository(
     private val context: Context,
@@ -53,6 +53,7 @@ class VaultRepository(
                 syncedAtEpochMillis = null,
             )
             vaultItemDao.insertLocalItemAndEnqueue(item)
+            SyncScheduler.enqueue(context)
             item.toVaultItem()
         } catch (error: Exception) {
             temporary.delete()
@@ -81,8 +82,21 @@ class VaultRepository(
             syncedAtEpochMillis = null,
         )
         vaultItemDao.insertLocalItemAndEnqueue(item)
+        SyncScheduler.enqueue(context)
         return item.toVaultItem()
     }
+
+    suspend fun pendingItems(limit: Int = 20): List<VaultItem> =
+        vaultItemDao.pendingItems(limit).map(VaultItemEntity::toVaultItem)
+
+    suspend fun updateSyncState(
+        id: String,
+        status: NoteSyncStatus,
+        error: String?,
+        syncedAtEpochMillis: Long?,
+    ) = vaultItemDao.updateSyncStateAndOutbox(id, status.name, error, syncedAtEpochMillis)
+
+    fun requestSync() = SyncScheduler.enqueue(context)
 }
 
 private fun VaultItemEntity.toVaultItem() = VaultItem(

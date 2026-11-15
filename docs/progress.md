@@ -1,10 +1,10 @@
 # Progress
 
-Last updated: 2026-09-16
+Last updated: 2026-11-15
 
 ## Current state
 
-Milestones 0, 1, 2, and 3A are complete. Milestone 3R has a verified synthetic-only cloud retrieval/answer experiment and is awaiting owner review; it is not yet accepted as complete. Milestone 3A verifies one owner signing in and explicitly uploading a device-local text note through a locally running FastAPI API to Supabase Postgres, followed by authenticated cloud read-back. Supabase Free, email/password Auth, owner-scoped RLS, FastAPI/Pydantic, and Room as the Android UI source of truth are confirmed for this development experiment. There is no hosted API, automatic sync, backup guarantee, or Android AI feature.
+Milestones 0, 1, 2, 3A, and the synthetic-only 3R retrieval baseline are complete. The current development checkpoint adds local-first image/link capture and verified automatic media upload/read-back through the locally running FastAPI API. Supabase Free, email/password Auth, owner-scoped RLS, private Storage, FastAPI/Pydantic, and Room as the Android UI source of truth are confirmed. There is no hosted API, backup guarantee, media processing, or Android Ask feature yet.
 
 ## Verified Milestone 1 work
 
@@ -40,6 +40,14 @@ Generated APKs, build reports, Gradle caches, local IDE state, SDK paths, and de
 - The owner signed in on the phone, uploaded a text note, received **Cloud read-back verified**, repeated verification without creating a second `text_notes` row, closed/reopened the app, and confirmed the locally stored note and cloud-verified state remained. Earlier safe failures left the local note readable and retryable before the successful retry.
 - FastAPI is **not deployed**. The verified 3A cloud path runs on the owner's laptop and reaches the phone through a temporary ADB reverse rule, so sign-in/upload/read-back testing requires the laptop API process to be running. Device-local capture and reading do not require the laptop or network.
 
+## Verified local media and automatic-sync checkpoint
+
+- The Room database migrated non-destructively to version 3. Existing text notes are mirrored into a typed `vault_items` table; new images are copied to private app storage before their durable metadata/outbox record is created, and public links are validated locally. Existing local text remains intact.
+- Migration `0004_vault_items_and_private_originals.sql` was applied successfully in Supabase. It creates the private `justdump-originals` bucket, a 10 MB image limit, owner-only Storage policies, and owner-scoped idempotent metadata for images and links.
+- WorkManager drains the durable local outbox only when Android reports a network. For media, it marks an item synced only after FastAPI stores it using the caller JWT under RLS and a matching authenticated metadata read-back succeeds. Failed items retain their local original and remain retryable through **Upload and verify**.
+- Backend contract checks passed (16 tests), and Android `assembleDebug` and `lintDebug` passed. The owner installed the updated debug build on the Samsung device and confirmed an image/link upload reached **Cloud read-back verified**.
+- FastAPI still runs locally on the laptop, so this test requires the laptop process, ADB reverse rule, and phone connection. This is cloud synchronisation during development, not a tested backup or recovery capability.
+
 ## Confirmed context
 
 - JustDump is initially a single-user Android application.
@@ -74,6 +82,6 @@ Decisions should be made only when their milestone needs them, using current off
 
 ## Current delivery state
 
-Milestone 3R is the verified retrieval baseline to be committed at the first delivery checkpoint. Migration 0003 was applied, and the deliberately synthetic `evals/synthetic/v1` corpus was uploaded through the authenticated API, then indexed explicitly. The fixed FTS/vector development and held-out runs completed; their redacted reports are ignored, while [the tracked results summary](../evals/synthetic/v1/results-summary.md) records measured Recall@3/MRR, citation validity, abstention, conflict failures, and the $0.013036 actual provider usage. A subsequent synthetic conflict refinement is verified locally and by a direct model contract check: conflicting dates cause a required dual-citation conflict answer, with a deterministic dual-citation fallback for malformed model output. The complete evaluation report set has not yet been rerun after that refinement. Only explicit fixture IDs were indexed; existing personal notes were not selected automatically. Continuous delivery now proceeds with local-first Android capture, durable sync/outbox, Supabase storage/processing, LangGraph Q&A, and phone verification. Hosted Python delivery remains deferred pending an explicit provider decision.
+The 3R retrieval baseline is committed and pushed. Migration 0003 was applied, and the deliberately synthetic `evals/synthetic/v1` corpus was uploaded through the authenticated API, then indexed explicitly. The fixed FTS/vector development and held-out runs completed; their redacted reports are ignored, while [the tracked results summary](../evals/synthetic/v1/results-summary.md) records measured Recall@3/MRR, citation validity, abstention, conflict failures, and the $0.013036 actual provider usage. A subsequent synthetic conflict refinement is verified locally and by a direct model contract check: conflicting dates cause a required dual-citation conflict answer, with a deterministic dual-citation fallback for malformed model output. Only explicit fixture IDs were indexed; existing personal notes were not selected automatically. Continuous delivery now proceeds with Android sharing, durable processing, owner-scoped retrieval, LangGraph Q&A, and phone verification. Hosted Python delivery remains deferred pending an explicit provider decision.
 
 Render remains only a proposed API host. No hosted service or paid option has been enabled.

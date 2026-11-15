@@ -37,6 +37,11 @@ class VaultViewModel(private val repository: VaultRepository) : ViewModel() {
 
     fun saveLink(url: String) = save { repository.saveLink(url) }
 
+    fun requestSync() {
+        repository.requestSync()
+        state.update { it.copy(message = "Cloud upload requested for pending items.") }
+    }
+
     fun openItem(id: String) {
         state.update { it.copy(selectedItemId = id, message = null) }
         observeSelectedItem(id)

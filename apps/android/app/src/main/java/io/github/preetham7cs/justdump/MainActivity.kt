@@ -69,6 +69,7 @@ import io.github.preetham7cs.justdump.ui.NotesUiState
 import io.github.preetham7cs.justdump.ui.NotesViewModel
 import io.github.preetham7cs.justdump.ui.VaultUiState
 import io.github.preetham7cs.justdump.ui.VaultViewModel
+import io.github.preetham7cs.justdump.cloud.SyncScheduler
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -81,7 +82,9 @@ class MainActivity : ComponentActivity() {
         NotesViewModel.factory(app.notesRepository, app.noteSyncCoordinator)
     }
     private val accountViewModel: AccountViewModel by viewModels {
-        AccountViewModel.factory((application as JustDumpApplication).authRepository)
+        AccountViewModel.factory((application as JustDumpApplication).authRepository) {
+            SyncScheduler.enqueue(this)
+        }
     }
     private val vaultViewModel: VaultViewModel by viewModels {
         VaultViewModel.factory((application as JustDumpApplication).vaultRepository)
@@ -152,6 +155,7 @@ private fun JustDumpApp(
                 onPickImage = { imagePicker.launch("image/*") },
                 onAddLink = { showLinkCapture = true },
                 onOpenVaultItem = vaultViewModel::openItem,
+                onUploadVaultItems = vaultViewModel::requestSync,
             )
             }
         }
@@ -182,6 +186,7 @@ private fun CaptureAndRecentsScreen(
     onPickImage: () -> Unit,
     onAddLink: () -> Unit,
     onOpenVaultItem: (String) -> Unit,
+    onUploadVaultItems: () -> Unit,
 ) {
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
         LazyColumn(
@@ -307,7 +312,11 @@ private fun CaptureAndRecentsScreen(
                     Text("Images & links", style = MaterialTheme.typography.headlineSmall)
                 }
                 items(vaultUiState.items, key = VaultItem::id) { item ->
-                    VaultItemRow(item = item, onClick = { onOpenVaultItem(item.id) })
+                    VaultItemRow(
+                        item = item,
+                        onClick = { onOpenVaultItem(item.id) },
+                        onUpload = onUploadVaultItems,
+                    )
                 }
             }
         }
@@ -315,7 +324,7 @@ private fun CaptureAndRecentsScreen(
 }
 
 @Composable
-private fun VaultItemRow(item: VaultItem, onClick: () -> Unit) {
+private fun VaultItemRow(item: VaultItem, onClick: () -> Unit, onUpload: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(24.dp),
@@ -338,10 +347,20 @@ private fun VaultItemRow(item: VaultItem, onClick: () -> Unit) {
                 }
                 Text(detail, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(5.dp))
-                Text("Saved on this device", style = MaterialTheme.typography.labelSmall)
+                Text(vaultSyncLabel(item), style = MaterialTheme.typography.labelSmall)
+                if (item.syncStatus != NoteSyncStatus.SYNCED && item.syncStatus != NoteSyncStatus.UPLOADING) {
+                    TextButton(onClick = onUpload) { Text("Upload and verify") }
+                }
             }
         }
     }
+}
+
+private fun vaultSyncLabel(item: VaultItem): String = when (item.syncStatus) {
+    NoteSyncStatus.PENDING_UPLOAD -> "Saved on this device — upload pending"
+    NoteSyncStatus.UPLOADING -> "Uploading and verifying cloud copy…"
+    NoteSyncStatus.SYNCED -> "Cloud read-back verified — still saved on this device"
+    NoteSyncStatus.FAILED -> item.syncError ?: "Upload failed — local item is still available"
 }
 
 @Composable
@@ -577,6 +596,7 @@ private fun CaptureAndRecentsPreview() {
             onPickImage = {},
             onAddLink = {},
             onOpenVaultItem = {},
+            onUploadVaultItems = {},
         )
     }
 }

@@ -6,6 +6,7 @@ import io.github.preetham7cs.justdump.data.VaultRepository
 import io.github.preetham7cs.justdump.data.local.JustDumpDatabase
 import io.github.preetham7cs.justdump.auth.SupabaseAuthRepository
 import io.github.preetham7cs.justdump.cloud.CloudNotesApi
+import io.github.preetham7cs.justdump.cloud.CloudVaultApi
 import io.github.preetham7cs.justdump.cloud.NoteSyncCoordinator
 
 class JustDumpApplication : Application() {
@@ -24,4 +25,6 @@ class JustDumpApplication : Application() {
     val noteSyncCoordinator: NoteSyncCoordinator by lazy {
         NoteSyncCoordinator(notesRepository, authRepository, CloudNotesApi())
     }
+
+    val cloudVaultApi: CloudVaultApi by lazy { CloudVaultApi() }
 }

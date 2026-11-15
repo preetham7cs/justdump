@@ -146,6 +146,28 @@ Full-text reached development Recall@3/MRR of 0.70/0.60 and held-out 0.67/0.33. 
 - **Limitations or uncertainty:** the corpus is too small and synthetic to establish general quality. Raw answer support/completeness needs human review. No conclusion applies to personal notes.
 - **Follow-up question:** does a minimal typed LangGraph retrieve -> answer/abstain wrapper with privacy-aware tracing improve the same held-out cases enough to justify its added complexity?
 
+## Entry: Durable media outbox and owner-scoped originals
+
+- **Date:** 2026-11-15
+- **Milestone:** Continuous v1 checkpoint, local image/link capture and automatic media sync
+- **Question or concept:** How can a device-local image or link be retried safely without making a cloud copy look like a backup?
+- **Why it matters to JustDump:** Capture must remain usable offline, while a successful status must mean that the authenticated cloud metadata was read back.
+- **Decision status:** Confirmed for the local FastAPI development topology
+
+### Mental model
+
+Room stores the item and a separate outbox instruction before WorkManager is asked to run. For images, the original is copied into app-private storage first. WorkManager requires a network, sends the owner JWT to FastAPI, and retries transient failures. The backend forwards the caller identity to Supabase so Storage and Postgres RLS apply. A stable local UUID makes a repeat safe; the item becomes synced only after a matching cloud read-back.
+
+### Results
+
+The Supabase migration created a private, 10 MB-limited originals bucket and owner-only policies. Backend checks passed (16 tests); Android build and lint passed. On the physical phone, the owner saved a media item and observed **Cloud read-back verified**. The local original remains available after a failure or retry.
+
+### Conclusion
+
+- **What was learned:** local durability, a durable instruction to sync, cloud upload, and verified remote acknowledgement are distinct states.
+- **Decision:** retain Room/outbox plus WorkManager and caller-token/RLS storage access. Keep an explicit retry action visible.
+- **Limitations or uncertainty:** FastAPI still runs on the laptop through ADB reverse; no hosted availability, reboot test, backup/restore test, image processing, or link extraction is verified.
+
 ## Entry: _title_
 
 - **Date:** YYYY-MM-DD
